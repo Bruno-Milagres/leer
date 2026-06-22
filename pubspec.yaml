@@ -1,0 +1,73 @@
+name: leer
+description: "Leitor de ebooks open source para Calibre-Web"
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^15.1.1
+
+  # Local database (drift)
+  drift: ^2.20.0
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.24
+
+  # HTTP + OPDS/XML
+  dio: ^5.7.0
+  xml: ^6.5.0
+
+  # EPUB reader
+  flutter_epub_viewer: ^1.0.5
+
+  # Theming
+  dynamic_color: ^1.7.0
+  palette_generator: ^0.3.3+3
+
+  # Images + storage
+  cached_network_image: ^3.4.1
+  path_provider: ^2.1.5
+  file_picker: ^8.1.6
+  flutter_secure_storage: ^9.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+  # drift code generation
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/illustrations/
+
+  fonts:
+    - family: Playfair Display
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-Variable.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+        - asset: assets/fonts/Inter-Italic-Variable.ttf
+          style: italic
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata-Variable.ttf
+        - asset: assets/fonts/Literata-Italic-Variable.ttf
+          style: italic
