@@ -2,15 +2,28 @@
 
 Leitor de ebooks open source para Calibre-Web
 
-## Getting Started
+## Setup
 
-This project is a starting point for a Flutter application.
+### 1. Configurar ambiente
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+cp .env.example .env
+# Edite .env com o host/porta do seu Calibre-Web
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 2. Subir o Calibre-Web local (opcional)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd compose
+docker compose up -d
+```
+
+Veja [`compose/README.md`](compose/README.md) para detalhes.
+
+### 3. Rodar o app
+
+```bash
+flutter run --dart-define-from-file=.env
+```
+
+O flag `--dart-define-from-file` injeta as variáveis do `.env` como compile-time constants. Sem ele, o app usa fallbacks para emulador (`10.0.2.2:8083`).

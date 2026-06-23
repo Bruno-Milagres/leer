@@ -1,0 +1,19 @@
+services:
+  # ----------------------------------------------------------------
+  # Calibre-Web: biblioteca + OPDS feed que o app Leer vai consumir
+  # ----------------------------------------------------------------
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: leer-calibre-web
+    env_file:
+      - ../.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    volumes:
+      - ./config:/config
+      - ./calibre-library:/books
+    ports:
+      - "${CALIBRE_WEB_PORT:-8083}:8083"
+    restart: unless-stopped

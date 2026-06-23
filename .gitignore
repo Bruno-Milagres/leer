@@ -46,3 +46,6 @@ app.*.map.json
 
 # Claude Code local settings (pessoal — não versionar)
 .claude/settings.local.json
+
+# Environment config (credenciais de dev — não versionar)
+.env

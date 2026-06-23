@@ -1,0 +1,8 @@
+# Dados persistentes do Calibre-Web — não versionar
+config/
+calibre-library/
+_tmp_books/
+
+# Mantém as pastas no git, mas vazias
+!config/.gitkeep
+!calibre-library/.gitkeep
