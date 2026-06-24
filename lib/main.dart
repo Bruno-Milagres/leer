@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'features/reader/providers/reader_providers.dart';
+import 'features/settings/providers/settings_providers.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: LeerApp()));
+
+  final prefsService = ReaderPrefsService();
+  final savedSettings = await prefsService.load();
+
+  runApp(ProviderScope(
+    overrides: [
+      readerSettingsProvider.overrideWith((ref) => savedSettings),
+    ],
+    child: const LeerApp(),
+  ));
 }
