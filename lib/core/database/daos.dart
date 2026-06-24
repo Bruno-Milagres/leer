@@ -104,7 +104,7 @@ class ReadingProgressDao extends DatabaseAccessor<AppDatabase>
       into(readingProgress).insertOnConflictUpdate(entry);
 }
 
-@DriftAccessor(tables: [Annotations])
+@DriftAccessor(tables: [Annotations, Books])
 class AnnotationsDao extends DatabaseAccessor<AppDatabase>
     with _$AnnotationsDaoMixin {
   AnnotationsDao(super.db);
@@ -113,6 +113,19 @@ class AnnotationsDao extends DatabaseAccessor<AppDatabase>
       (select(annotations)
             ..orderBy([(a) => OrderingTerm(expression: a.bookId)]))
           .watch();
+
+  Stream<List<(Annotation, Book)>> watchAllWithBook() {
+    final query = select(annotations).join([
+      innerJoin(books, books.id.equalsExp(annotations.bookId)),
+    ])
+      ..orderBy([OrderingTerm.asc(books.title), OrderingTerm.desc(annotations.createdAt)]);
+
+    return query.watch().map((rows) => rows.map((row) {
+          final annotation = row.readTable(annotations);
+          final book = row.readTable(books);
+          return (annotation, book);
+        }).toList());
+  }
 
   Stream<List<Annotation>> watchForBook(int bookId) =>
       (select(annotations)..where((a) => a.bookId.equals(bookId))).watch();

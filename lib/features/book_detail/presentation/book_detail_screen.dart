@@ -116,7 +116,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                 body: TabBarView(
                   children: [
                     _DescriptionTab(description: book.description),
-                    const _AnnotationsTab(),
+                    _AnnotationsTab(bookId: book.id),
                   ],
                 ),
               ),
@@ -449,15 +449,114 @@ class _DescriptionTab extends StatelessWidget {
   }
 }
 
-class _AnnotationsTab extends StatelessWidget {
-  const _AnnotationsTab();
+class _AnnotationsTab extends ConsumerWidget {
+  const _AnnotationsTab({required this.bookId});
+
+  final int bookId;
 
   @override
-  Widget build(BuildContext context) {
-    return const EmptyStateView(
-      title: 'Nenhuma anotação',
-      message: 'Destaques e notas aparecerão aqui',
-      icon: Icons.bookmark_border_rounded,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final annotationsAsync = ref.watch(
+      StreamProvider<List<Annotation>>((ref) {
+        final db = ref.watch(databaseProvider);
+        return db.annotationsDao.watchForBook(bookId);
+      }),
+    );
+
+    return annotationsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const EmptyStateView(
+        title: 'Erro ao carregar',
+        icon: Icons.error_outline,
+      ),
+      data: (annotations) {
+        if (annotations.isEmpty) {
+          return const EmptyStateView(
+            title: 'Nenhuma anotação',
+            message: 'Destaques e notas aparecerão aqui',
+            icon: Icons.bookmark_border_rounded,
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppTokens.spaceMd),
+          itemCount: annotations.length,
+          itemBuilder: (context, index) {
+            final a = annotations[index];
+            final color = Color(
+              int.parse(a.color.replaceFirst('#', '0xFF')),
+            );
+
+            return Dismissible(
+              key: ValueKey(a.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: AppTokens.spaceMd),
+                color: Theme.of(context).colorScheme.error,
+                child: const Icon(Icons.delete_rounded, color: Colors.white),
+              ),
+              onDismissed: (_) {
+                ref.read(databaseProvider).annotationsDao.deleteAnnotation(a.id);
+              },
+              child: InkWell(
+                onTap: () => context.go('/library/book/$bookId/read'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppTokens.spaceSm,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: AppTokens.spaceSm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '"${a.selectedText}"',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontStyle: FontStyle.italic),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (a.note != null && a.note!.isNotEmpty) ...[
+                              const SizedBox(height: AppTokens.spaceXs),
+                              Text(
+                                a.note!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
