@@ -18,6 +18,7 @@ class ServersDaoManager {
 mixin _$BooksDaoMixin on DatabaseAccessor<AppDatabase> {
   $ServersTable get servers => attachedDatabase.servers;
   $BooksTable get books => attachedDatabase.books;
+  $ReadingProgressTable get readingProgress => attachedDatabase.readingProgress;
   BooksDaoManager get managers => BooksDaoManager(this);
 }
 
@@ -28,6 +29,11 @@ class BooksDaoManager {
       $$ServersTableTableManager(_db.attachedDatabase, _db.servers);
   $$BooksTableTableManager get books =>
       $$BooksTableTableManager(_db.attachedDatabase, _db.books);
+  $$ReadingProgressTableTableManager get readingProgress =>
+      $$ReadingProgressTableTableManager(
+        _db.attachedDatabase,
+        _db.readingProgress,
+      );
 }
 
 mixin _$ReadingProgressDaoMixin on DatabaseAccessor<AppDatabase> {

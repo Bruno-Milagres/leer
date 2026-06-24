@@ -38,7 +38,7 @@ class ServersDao extends DatabaseAccessor<AppDatabase> with _$ServersDaoMixin {
       });
 }
 
-@DriftAccessor(tables: [Books])
+@DriftAccessor(tables: [Books, ReadingProgress])
 class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
   BooksDao(super.db);
 
@@ -47,6 +47,22 @@ class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
 
   Stream<List<Book>> watchDownloaded() =>
       (select(books)..where((b) => b.isDownloaded.equals(true))).watch();
+
+  Stream<List<(Book, ReadingProgressData?)>> watchWithProgressByServer(
+      int serverId) {
+    final query = select(books).join([
+      leftOuterJoin(
+          readingProgress, readingProgress.bookId.equalsExp(books.id)),
+    ])
+      ..where(books.serverId.equals(serverId))
+      ..orderBy([OrderingTerm.asc(books.title)]);
+
+    return query.watch().map((rows) => rows.map((row) {
+          final book = row.readTable(books);
+          final progress = row.readTableOrNull(readingProgress);
+          return (book, progress);
+        }).toList());
+  }
 
   Future<Book?> getById(int id) =>
       (select(books)..where((b) => b.id.equals(id))).getSingleOrNull();
