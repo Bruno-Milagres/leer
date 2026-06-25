@@ -8,36 +8,103 @@ import 'opds_parser.dart';
 
 /// Cliente HTTP para o catálogo OPDS de um servidor Calibre-Web.
 ///
-/// Usa autenticação básica quando há credenciais e resolve URLs relativas dos
-/// links (capa/download) contra a base do servidor.
+/// O `/opds` raiz do Calibre-Web é um feed de navegação; os livros ficam em
+/// sub-catálogos (`/opds/books/letter/...`). Este cliente percorre a árvore de
+/// navegação do ramo de livros, coletando todas as entradas de aquisição.
 class OpdsClient {
   OpdsClient({Dio? dio, OpdsParser? parser})
-      : _dio = dio ?? Dio(),
-        _parser = parser ?? const OpdsParser();
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          ),
+      _parser = parser ?? const OpdsParser();
 
   final Dio _dio;
   final OpdsParser _parser;
 
   static const _opdsPath = '/opds';
+  static const _maxDepth = 6;
 
-  /// Recupera e faz o parse do catálogo de livros do [baseUrl].
-  ///
-  /// As URLs relativas de capa/download são resolvidas para absolutas.
+  /// Recupera e faz o parse do catálogo de livros do [baseUrl], percorrendo os
+  /// sub-catálogos de navegação. URLs de capa/download são resolvidas.
   Future<List<OpdsEntry>> fetchCatalog({
     required String baseUrl,
     String? username,
     String? password,
   }) async {
     final base = _normalizeBase(baseUrl);
-    final feedUrl = '$base$_opdsPath';
+    final headers = _authHeaders(username, password);
+    final collected = <String, OpdsEntry>{};
+    final visited = <String>{};
 
+    await _crawl('$base$_opdsPath', base, headers, collected, visited);
+
+    return collected.values.toList(growable: false);
+  }
+
+  Future<void> _crawl(
+    String url,
+    String base,
+    Map<String, String> headers,
+    Map<String, OpdsEntry> collected,
+    Set<String> visited, {
+    int depth = 0,
+  }) async {
+    if (depth > _maxDepth) return;
+    if (!visited.add(url)) return;
+
+    final body = await _fetch(url, headers);
+
+    final OpdsFeed feed;
+    try {
+      feed = _parser.parseFeed(body);
+    } catch (_) {
+      throw const OpdsException(OpdsErrorKind.invalidFeed);
+    }
+
+    for (final book in feed.books) {
+      final resolved = _resolveUrls(book, base);
+      collected[resolved.calibreId] = resolved;
+    }
+
+    // Paginação dentro de uma listagem de livros.
+    if (feed.nextLink != null) {
+      await _crawl(
+        _abs(feed.nextLink!, base),
+        base,
+        headers,
+        collected,
+        visited,
+        depth: depth,
+      );
+    }
+
+    // Sub-catálogos: apenas o ramo de livros (evita autores/séries/hot/etc.).
+    for (final nav in feed.navigationLinks) {
+      if (!nav.contains('/books')) continue;
+      await _crawl(
+        _abs(nav, base),
+        base,
+        headers,
+        collected,
+        visited,
+        depth: depth + 1,
+      );
+    }
+  }
+
+  Future<String> _fetch(String url, Map<String, String> headers) async {
     final Response<String> response;
     try {
       response = await _dio.get<String>(
-        feedUrl,
+        url,
         options: Options(
           responseType: ResponseType.plain,
-          headers: _authHeaders(username, password),
+          headers: headers,
           validateStatus: (s) => s != null && s < 500,
         ),
       );
@@ -57,24 +124,24 @@ class OpdsClient {
     if (body == null || body.isEmpty) {
       throw const OpdsException(OpdsErrorKind.invalidFeed);
     }
-
-    final List<OpdsEntry> entries;
-    try {
-      entries = _parser.parse(body);
-    } catch (_) {
-      throw const OpdsException(OpdsErrorKind.invalidFeed);
-    }
-
-    return entries.map((e) => _resolveUrls(e, base)).toList(growable: false);
+    return body;
   }
 
-  /// Apenas valida que o endpoint OPDS responde um feed (seção 4.1).
+  /// Valida que o endpoint OPDS responde um feed válido (seção 4.1). Não
+  /// percorre a biblioteca inteira — apenas o feed raiz.
   Future<void> validate({
     required String baseUrl,
     String? username,
     String? password,
-  }) =>
-      fetchCatalog(baseUrl: baseUrl, username: username, password: password);
+  }) async {
+    final base = _normalizeBase(baseUrl);
+    final body = await _fetch('$base$_opdsPath', _authHeaders(username, password));
+    try {
+      _parser.parseFeed(body);
+    } catch (_) {
+      throw const OpdsException(OpdsErrorKind.invalidFeed);
+    }
+  }
 
   Map<String, String> _authHeaders(String? username, String? password) {
     if (username == null || username.isEmpty) return const {};
@@ -89,23 +156,20 @@ class OpdsClient {
     return base;
   }
 
-  OpdsEntry _resolveUrls(OpdsEntry e, String base) {
-    String? abs(String? href) {
-      if (href == null || href.isEmpty) return href;
-      if (href.startsWith('http://') || href.startsWith('https://')) {
-        return href;
-      }
-      return '$base${href.startsWith('/') ? '' : '/'}$href';
-    }
+  String _abs(String href, String base) {
+    if (href.startsWith('http://') || href.startsWith('https://')) return href;
+    return '$base${href.startsWith('/') ? '' : '/'}$href';
+  }
 
+  OpdsEntry _resolveUrls(OpdsEntry e, String base) {
     return OpdsEntry(
       calibreId: e.calibreId,
       title: e.title,
       author: e.author,
       series: e.series,
       seriesIndex: e.seriesIndex,
-      coverUrl: abs(e.coverUrl),
-      downloadUrl: abs(e.downloadUrl)!,
+      coverUrl: e.coverUrl == null ? null : _abs(e.coverUrl!, base),
+      downloadUrl: _abs(e.downloadUrl, base),
       language: e.language,
       fileSizeKb: e.fileSizeKb,
       description: e.description,

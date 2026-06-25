@@ -29,7 +29,8 @@ class AnnotationsScreen extends ConsumerWidget {
           if (items.isEmpty) {
             return const EmptyStateView(
               title: 'Nenhuma anotação',
-              message: 'Destaques e notas feitos durante a leitura aparecerão aqui',
+              message:
+                  'Destaques e notas feitos durante a leitura aparecerão aqui',
               icon: Icons.bookmark_border_rounded,
             );
           }
@@ -37,7 +38,9 @@ class AnnotationsScreen extends ConsumerWidget {
           final grouped = <int, (Book, List<Annotation>)>{};
           for (final (annotation, book) in items) {
             final entry = grouped.putIfAbsent(
-                book.id, () => (book, <Annotation>[]));
+              book.id,
+              () => (book, <Annotation>[]),
+            );
             entry.$2.add(annotation);
           }
 
@@ -52,7 +55,10 @@ class AnnotationsScreen extends ConsumerWidget {
                 book: book,
                 annotations: annotations,
                 onDelete: (id) {
-                  ref.read(databaseProvider).annotationsDao.deleteAnnotation(id);
+                  ref
+                      .read(databaseProvider)
+                      .annotationsDao
+                      .deleteAnnotation(id);
                 },
               );
             },
@@ -99,21 +105,20 @@ class _BookAnnotationGroup extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppTokens.spaceSm),
-        ...annotations.map((a) => Dismissible(
-              key: ValueKey(a.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: AppTokens.spaceMd),
-                color: theme.colorScheme.error,
-                child: const Icon(Icons.delete_rounded, color: Colors.white),
-              ),
-              onDismissed: (_) => onDelete(a.id),
-              child: _AnnotationItem(
-                annotation: a,
-                bookId: book.id,
-              ),
-            )),
+        ...annotations.map(
+          (a) => Dismissible(
+            key: ValueKey(a.id),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: AppTokens.spaceMd),
+              color: theme.colorScheme.error,
+              child: const Icon(Icons.delete_rounded, color: Colors.white),
+            ),
+            onDismissed: (_) => onDelete(a.id),
+            child: _AnnotationItem(annotation: a, bookId: book.id),
+          ),
+        ),
         const SizedBox(height: AppTokens.spaceLg),
       ],
     );
@@ -131,17 +136,14 @@ class _BookAnnotationGroup extends StatelessWidget {
       buffer.writeln();
     }
     Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Anotações copiadas')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Anotações copiadas')));
   }
 }
 
 class _AnnotationItem extends StatelessWidget {
-  const _AnnotationItem({
-    required this.annotation,
-    required this.bookId,
-  });
+  const _AnnotationItem({required this.annotation, required this.bookId});
 
   final Annotation annotation;
   final int bookId;
@@ -149,9 +151,7 @@ class _AnnotationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = Color(
-      int.parse(annotation.color.replaceFirst('#', '0xFF')),
-    );
+    final color = Color(int.parse(annotation.color.replaceFirst('#', '0xFF')));
 
     return InkWell(
       onTap: () => context.go('/library/book/$bookId/read'),

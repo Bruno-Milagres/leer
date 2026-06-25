@@ -11,7 +11,7 @@ final downloadsSortProvider = StateProvider<DownloadsSort>(
 
 final downloadsProvider = StreamProvider<List<Book>>((ref) {
   final db = ref.watch(databaseProvider);
-  return db.booksDao.watchDownloaded();
+  return db.booksDao.watchDownloadedCalibre();
 });
 
 final sortedDownloadsProvider = Provider<AsyncValue<List<Book>>>((ref) {
@@ -26,8 +26,7 @@ final sortedDownloadsProvider = Provider<AsyncValue<List<Book>>>((ref) {
       case DownloadsSort.title:
         sorted.sort((a, b) => a.title.compareTo(b.title));
       case DownloadsSort.author:
-        sorted.sort((a, b) =>
-            (a.author ?? '').compareTo(b.author ?? ''));
+        sorted.sort((a, b) => (a.author ?? '').compareTo(b.author ?? ''));
     }
     return sorted;
   });

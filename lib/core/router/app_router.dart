@@ -9,8 +9,8 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/reader/presentation/reader_screen.dart';
 import '../../features/settings/presentation/reader_settings_screen.dart';
-import '../../features/settings/presentation/server_settings_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/settings/presentation/sources_screen.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 
@@ -19,31 +19,30 @@ final _libraryKey = GlobalKey<NavigatorState>();
 final _downloadsKey = GlobalKey<NavigatorState>();
 final _settingsKey = GlobalKey<NavigatorState>();
 
-/// Router do app (seção 6). Redireciona para /onboarding quando não há
-/// servidor configurado, e de / para /library.
 final goRouterProvider = Provider<GoRouter>((ref) {
-  // Reavalia os redirects sempre que o servidor ativo muda.
   final refresh = ValueNotifier<int>(0);
   ref.onDispose(refresh.dispose);
-  ref.listen(activeServerProvider, (_, __) => refresh.value++);
+  ref.listen(allSourcesProvider, (_, __) => refresh.value++);
 
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/library',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final activeServer = ref.read(activeServerProvider);
-      // Durante o carregamento inicial não redirecionamos.
-      if (activeServer.isLoading) return null;
+      final sourcesAsync = ref.read(allSourcesProvider);
+      if (sourcesAsync.isLoading) return null;
 
-      final hasServer = activeServer.valueOrNull != null;
+      final sources = sourcesAsync.valueOrNull ?? [];
+      final hasSources = sources.isNotEmpty;
       final atOnboarding = state.matchedLocation == '/onboarding';
-      final atServerSetup = state.matchedLocation == '/settings/server';
+      final atSourceSetup = state.matchedLocation.startsWith(
+        '/settings/sources',
+      );
 
-      if (!hasServer && !atOnboarding && !atServerSetup) {
+      if (!hasSources && !atOnboarding && !atSourceSetup) {
         return '/onboarding';
       }
-      if (hasServer && atOnboarding) {
+      if (hasSources && atOnboarding) {
         return '/library';
       }
       return null;
@@ -57,9 +56,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/library/book/:id/read',
         parentNavigatorKey: _rootKey,
-        builder: (context, state) => ReaderScreen(
-          bookId: int.parse(state.pathParameters['id']!),
-        ),
+        builder: (context, state) =>
+            ReaderScreen(bookId: int.parse(state.pathParameters['id']!)),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -104,8 +102,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const SettingsScreen(),
                 routes: [
                   GoRoute(
-                    path: 'server',
-                    builder: (context, state) => const ServerSettingsScreen(),
+                    path: 'sources',
+                    builder: (context, state) => const SourcesScreen(),
                   ),
                   GoRoute(
                     path: 'reader',

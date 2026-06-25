@@ -42,21 +42,21 @@ class AppColors {
 
   /// ColorScheme de fallback (dark).
   static ColorScheme get darkScheme => const ColorScheme.dark(
-        primary: darkPrimary,
-        onPrimary: darkOnPrimary,
-        surface: darkSurface,
-        onSurface: darkTextPrimary,
-        surfaceContainerHighest: darkSurfaceVariant,
-        outline: darkBorder,
-      );
+    primary: darkPrimary,
+    onPrimary: darkOnPrimary,
+    surface: darkSurface,
+    onSurface: darkTextPrimary,
+    surfaceContainerHighest: darkSurfaceVariant,
+    outline: darkBorder,
+  );
 
   /// ColorScheme de fallback (light).
   static ColorScheme get lightScheme => const ColorScheme.light(
-        primary: lightPrimary,
-        onPrimary: lightOnPrimary,
-        surface: lightSurface,
-        onSurface: lightTextPrimary,
-        surfaceContainerHighest: Color(0xFFEDE4DA),
-        outline: lightBorder,
-      );
+    primary: lightPrimary,
+    onPrimary: lightOnPrimary,
+    surface: lightSurface,
+    onSurface: lightTextPrimary,
+    surfaceContainerHighest: Color(0xFFEDE4DA),
+    outline: lightBorder,
+  );
 }

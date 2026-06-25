@@ -2,10 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'database/app_database.dart';
 import 'database/secure_credential_store.dart';
-import 'opds/library_sync_service.dart';
 import 'opds/opds_client.dart';
-
-/// Provedores de infraestrutura compartilhados por todo o app.
+import 'sources/library_repository.dart';
+import 'sources/source_factory.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -19,11 +18,27 @@ final secureCredentialStoreProvider = Provider<SecureCredentialStore>(
 
 final opdsClientProvider = Provider<OpdsClient>((ref) => OpdsClient());
 
-final librarySyncServiceProvider = Provider<LibrarySyncService>(
-  (ref) => LibrarySyncService(ref.watch(databaseProvider)),
-);
+final sourceFactoryProvider = Provider<SourceFactory>((ref) {
+  return SourceFactory(
+    opdsClient: ref.watch(opdsClientProvider),
+    credentialStore: ref.watch(secureCredentialStoreProvider),
+    database: ref.watch(databaseProvider),
+  );
+});
 
-/// Stream do servidor ativo — fonte da verdade para "há servidor configurado?".
-final activeServerProvider = StreamProvider((ref) {
-  return ref.watch(databaseProvider).serversDao.watchActive();
+final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
+  return LibraryRepository(
+    database: ref.watch(databaseProvider),
+    sourceFactory: ref.watch(sourceFactoryProvider),
+  );
+});
+
+/// Stream de fontes ativas — fonte da verdade para "há fonte configurada?".
+final activeSourcesProvider = StreamProvider<List<Source>>((ref) {
+  return ref.watch(databaseProvider).sourcesDao.watchActive();
+});
+
+/// Stream de todas as fontes cadastradas.
+final allSourcesProvider = StreamProvider<List<Source>>((ref) {
+  return ref.watch(databaseProvider).sourcesDao.watchAll();
 });

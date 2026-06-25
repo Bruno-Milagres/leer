@@ -1,14 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../core/database/app_database.dart';
-import '../../../core/providers.dart';
 import '../../reader/providers/reader_providers.dart';
-
-final allServersProvider = StreamProvider<List<Server>>((ref) {
-  final db = ref.watch(databaseProvider);
-  return db.serversDao.watchAll();
-});
 
 class ReaderPrefsService {
   static const _keyTheme = 'reader_theme';

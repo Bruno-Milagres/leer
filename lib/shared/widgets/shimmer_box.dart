@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Caixa com animação de shimmer reutilizável para placeholders de carregamento.
 class ShimmerBox extends StatefulWidget {
-  const ShimmerBox({
-    super.key,
-    this.width,
-    this.height,
-    this.borderRadius,
-  });
+  const ShimmerBox({super.key, this.width, this.height, this.borderRadius});
 
   final double? width;
   final double? height;

@@ -11,10 +11,10 @@ void main() async {
   final prefsService = ReaderPrefsService();
   final savedSettings = await prefsService.load();
 
-  runApp(ProviderScope(
-    overrides: [
-      readerSettingsProvider.overrideWith((ref) => savedSettings),
-    ],
-    child: const LeerApp(),
-  ));
+  runApp(
+    ProviderScope(
+      overrides: [readerSettingsProvider.overrideWith((ref) => savedSettings)],
+      child: const LeerApp(),
+    ),
+  );
 }

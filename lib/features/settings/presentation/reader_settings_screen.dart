@@ -44,13 +44,14 @@ class ReaderSettingsScreen extends ConsumerWidget {
                           ),
                         ),
                         child: Center(
-                          child: Text('Aa',
-                              style: TextStyle(color: colors.$2, fontSize: 14)),
+                          child: Text(
+                            'Aa',
+                            style: TextStyle(color: colors.$2, fontSize: 14),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(_themeLabel(t),
-                          style: theme.textTheme.bodySmall),
+                      Text(_themeLabel(t), style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -72,8 +73,10 @@ class ReaderSettingsScreen extends ConsumerWidget {
             }).toList(),
           ),
           const SizedBox(height: AppTokens.spaceLg),
-          Text('Tamanho: ${settings.fontSize}px',
-              style: theme.textTheme.titleSmall),
+          Text(
+            'Tamanho: ${settings.fontSize}px',
+            style: theme.textTheme.titleSmall,
+          ),
           Slider(
             value: settings.fontSize.toDouble(),
             min: 12,
@@ -85,16 +88,16 @@ class ReaderSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppTokens.spaceMd),
           Text(
-              'Espaçamento: ${settings.lineSpacing.toStringAsFixed(1)}',
-              style: theme.textTheme.titleSmall),
+            'Espaçamento: ${settings.lineSpacing.toStringAsFixed(1)}',
+            style: theme.textTheme.titleSmall,
+          ),
           Slider(
             value: settings.lineSpacing,
             min: 1.0,
             max: 2.5,
             divisions: 15,
             label: settings.lineSpacing.toStringAsFixed(1),
-            onChanged: (v) =>
-                _update(ref, settings.copyWith(lineSpacing: v)),
+            onChanged: (v) => _update(ref, settings.copyWith(lineSpacing: v)),
           ),
           const SizedBox(height: AppTokens.spaceLg),
           Container(

@@ -6,11 +6,11 @@ Tela principal de biblioteca do app Leer.
 
 ### Requirement: Grid de livros com 2 colunas
 
-A tela de biblioteca SHALL exibir os livros do servidor ativo em um grid de 2 colunas. Cada card SHALL exibir: capa do livro (imagem remota com cache), título (máximo 2 linhas, truncado com ellipsis), autor (máximo 1 linha) e barra de progresso de leitura quando houver progresso registrado.
+A tela de biblioteca SHALL exibir os livros de todas as fontes ativas em um grid de 2 colunas. Cada card SHALL exibir: capa do livro (imagem remota com cache para Calibre, imagem local para pasta), título (máximo 2 linhas, truncado com ellipsis), autor (máximo 1 linha), barra de progresso de leitura quando houver progresso registrado, e badge de fonte quando há múltiplas fontes ativas.
 
-#### Scenario: Servidor ativo com livros sincronizados
-- **WHEN** o servidor ativo possui livros na tabela `books`
-- **THEN** a tela exibe um grid de 2 colunas com um card por livro, ordenado por título
+#### Scenario: Múltiplas fontes ativas com livros
+- **WHEN** existem fontes ativas com livros indexados
+- **THEN** a tela exibe um grid de 2 colunas com todos os livros de todas as fontes, ordenados por título
 
 #### Scenario: Livro com progresso de leitura
 - **WHEN** um livro possui registro em `reading_progress` com percentage > 0
@@ -24,17 +24,25 @@ A tela de biblioteca SHALL exibir os livros do servidor ativo em um grid de 2 co
 - **WHEN** o campo `coverUrl` do livro é nulo
 - **THEN** o card exibe um placeholder com ícone de livro
 
+#### Scenario: Badge de fonte com múltiplas fontes
+- **WHEN** há mais de uma fonte ativa
+- **THEN** cada card exibe um badge discreto indicando a fonte (ícone Calibre / pasta)
+
+#### Scenario: Fonte única ativa
+- **WHEN** há apenas uma fonte ativa
+- **THEN** os cards não exibem badge de fonte
+
 ### Requirement: Capa com cache de imagem
 
-A capa dos livros SHALL ser carregada via `CachedNetworkImage` com autenticação básica do servidor ativo. Enquanto a imagem carrega, SHALL exibir um shimmer placeholder.
+A capa dos livros SHALL ser carregada via `CachedNetworkImage` com autenticação para livros de Calibre, ou via `Image.file` para livros de pasta local (capa extraída em cache). Enquanto a imagem carrega, SHALL exibir um shimmer placeholder.
 
-#### Scenario: Capa carregando
-- **WHEN** a imagem da capa ainda está sendo baixada
+#### Scenario: Capa de livro Calibre carregando
+- **WHEN** a imagem da capa de um livro Calibre ainda está sendo baixada
 - **THEN** o card exibe um `ShimmerBox` no lugar da capa
 
-#### Scenario: Capa carregada com sucesso
-- **WHEN** a imagem é recebida com sucesso
-- **THEN** a capa é exibida preenchendo o espaço do card com `BoxFit.cover`
+#### Scenario: Capa de livro local
+- **WHEN** o livro é de pasta local e possui capa extraída em cache
+- **THEN** a capa é carregada do arquivo local sem shimmer
 
 #### Scenario: Falha no carregamento da capa
 - **WHEN** a imagem falha ao carregar (rede, 404, etc.)
@@ -42,7 +50,7 @@ A capa dos livros SHALL ser carregada via `CachedNetworkImage` com autenticaçã
 
 ### Requirement: Chips de filtro horizontais
 
-A tela SHALL exibir chips de filtro em uma barra horizontal com scroll acima do grid. Os filtros disponíveis SHALL ser: Todos, Lendo, Baixados, Por Série. O chip ativo SHALL ter estilo visual diferenciado (filled vs outlined).
+A tela SHALL exibir chips de filtro em uma barra horizontal com scroll acima do grid. Os filtros disponíveis SHALL ser: Todos, Lendo, Baixados, Por Série, Por Fonte. O chip ativo SHALL ter estilo visual diferenciado (filled vs outlined).
 
 #### Scenario: Filtro padrão ao abrir
 - **WHEN** a tela de biblioteca é aberta
@@ -60,21 +68,25 @@ A tela SHALL exibir chips de filtro em uma barra horizontal com scroll acima do 
 - **WHEN** o usuário toca no chip "Por Série"
 - **THEN** os livros são agrupados por série, ordenados por `seriesIndex`, com um header de texto para cada série. Livros sem série aparecem ao final sob "Sem série"
 
+#### Scenario: Filtro "Por Fonte" selecionado
+- **WHEN** o usuário toca no chip "Por Fonte"
+- **THEN** os livros são agrupados pela fonte de origem, com header mostrando o nome da fonte
+
 ### Requirement: Pull-to-refresh sincroniza catálogo
 
-A tela SHALL suportar pull-to-refresh que dispara uma sincronização completa do catálogo OPDS do servidor ativo. O refresh SHALL usar as credenciais armazenadas no `SecureCredentialStore`.
+A tela SHALL suportar pull-to-refresh que dispara sincronização de todas as fontes ativas em paralelo. Para fontes Calibre, SHALL usar OPDS com credenciais. Para fontes de pasta local, SHALL re-varrer a pasta.
 
-#### Scenario: Refresh bem-sucedido
-- **WHEN** o usuário puxa a tela para baixo e o servidor responde
-- **THEN** o catálogo é sincronizado via `LibrarySyncService`, o grid é atualizado automaticamente via stream, e o indicador de refresh desaparece
+#### Scenario: Refresh bem-sucedido com múltiplas fontes
+- **WHEN** o usuário puxa a tela para baixo e todas as fontes respondem
+- **THEN** todas as fontes são sincronizadas, o grid é atualizado, e o indicador desaparece
 
-#### Scenario: Refresh com servidor inacessível
-- **WHEN** o usuário puxa a tela para baixo e o servidor não responde
-- **THEN** o indicador de refresh desaparece e um snackbar exibe a mensagem de erro
+#### Scenario: Refresh com uma fonte falhando
+- **WHEN** o refresh falha para uma fonte mas sucede para outras
+- **THEN** um snackbar exibe o erro da fonte que falhou; as demais atualizam normalmente
 
 #### Scenario: Refresh com credenciais inválidas
-- **WHEN** o servidor retorna 401 durante o refresh
-- **THEN** um snackbar exibe "Credenciais inválidas" e sugere verificar as configurações
+- **WHEN** uma fonte Calibre retorna 401 durante o refresh
+- **THEN** um snackbar exibe "Credenciais inválidas" para aquela fonte
 
 ### Requirement: Estado de carregamento com shimmer
 
@@ -86,11 +98,15 @@ A tela SHALL exibir um grid de placeholders shimmer enquanto os livros estão se
 
 ### Requirement: Estado vazio
 
-A tela SHALL exibir o `EmptyStateView` quando o servidor ativo não possui livros sincronizados. A mensagem SHALL orientar o usuário a adicionar livros ou sincronizar.
+A tela SHALL exibir o `EmptyStateView` quando nenhuma fonte ativa possui livros. A mensagem SHALL orientar o usuário a adicionar livros ou configurar uma fonte.
 
-#### Scenario: Biblioteca vazia após sync
-- **WHEN** o servidor ativo está acessível mas não possui livros no feed OPDS
+#### Scenario: Biblioteca vazia com fontes ativas
+- **WHEN** as fontes ativas não possuem livros
 - **THEN** a tela exibe "Nenhum livro encontrado" com ícone e sugestão de pull-to-refresh
+
+#### Scenario: Nenhuma fonte configurada
+- **WHEN** não há fontes cadastradas
+- **THEN** o redirect para onboarding é acionado (não chega nesta tela)
 
 ### Requirement: Estado de erro
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -31,13 +32,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(bookDetailProvider(widget.bookId));
     final progressAsync = ref.watch(bookProgressProvider(widget.bookId));
-    final annotationCountAsync =
-        ref.watch(annotationCountProvider(widget.bookId));
+    final annotationCountAsync = ref.watch(
+      annotationCountProvider(widget.bookId),
+    );
 
     return bookAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, _) => Scaffold(
         appBar: AppBar(),
         body: ErrorStateView(
@@ -59,6 +60,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         final effectiveTheme = _dynamicScheme != null
             ? baseTheme.copyWith(colorScheme: _dynamicScheme)
             : baseTheme;
+        final isLocal = _isLocalSource(book);
 
         _extractPalette(book, baseTheme.brightness);
 
@@ -80,6 +82,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                     child: _MetadataSection(
                       book: book,
                       progress: progress,
+                      sourceName: _sourceName(ref, book),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -87,8 +90,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                       book: book,
                       progress: progress,
                       isDownloading: _isDownloading,
-                      onRead: () =>
-                          context.go('/library/book/${book.id}/read'),
+                      isLocal: isLocal,
+                      onRead: () => context.go('/library/book/${book.id}/read'),
                       onDownload: () => _download(book),
                       onRemoveDownload: () => _removeDownload(book),
                     ),
@@ -127,48 +130,87 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     );
   }
 
+  bool _isLocalSource(Book book) {
+    return book.downloadUrl != null && !book.downloadUrl!.startsWith('http');
+  }
+
+  String? _sourceName(WidgetRef ref, Book book) {
+    final sourcesAsync = ref.watch(allSourcesProvider);
+    if (!sourcesAsync.hasValue) return null;
+    final source = sourcesAsync.value!
+        .where((s) => s.id == book.sourceId)
+        .firstOrNull;
+    return source?.name;
+  }
+
   void _extractPalette(Book book, Brightness brightness) {
     if (_dynamicScheme != null || book.coverUrl == null) return;
 
-    final provider = CachedNetworkImageProvider(book.coverUrl!);
-    PaletteGenerator.fromImageProvider(
-      provider,
-      maximumColorCount: 4,
-      timeout: const Duration(seconds: 3),
-    ).then((palette) {
-      final dominant = palette.dominantColor?.color;
-      if (dominant != null && mounted) {
-        setState(() {
-          _dynamicScheme = ColorScheme.fromSeed(
-            seedColor: dominant,
-            brightness: brightness,
-          );
-        });
-      }
-    }).catchError((_) {});
+    if (_isLocalCover(book.coverUrl!)) {
+      final file = File(book.coverUrl!);
+      if (!file.existsSync()) return;
+      PaletteGenerator.fromImageProvider(
+            FileImage(file),
+            maximumColorCount: 4,
+            timeout: const Duration(seconds: 3),
+          )
+          .then((palette) {
+            _applyPalette(palette, brightness);
+          })
+          .catchError((_) {});
+    } else {
+      final provider = CachedNetworkImageProvider(book.coverUrl!);
+      PaletteGenerator.fromImageProvider(
+            provider,
+            maximumColorCount: 4,
+            timeout: const Duration(seconds: 3),
+          )
+          .then((palette) {
+            _applyPalette(palette, brightness);
+          })
+          .catchError((_) {});
+    }
+  }
+
+  void _applyPalette(PaletteGenerator palette, Brightness brightness) {
+    final dominant = palette.dominantColor?.color;
+    if (dominant != null && mounted) {
+      setState(() {
+        _dynamicScheme = ColorScheme.fromSeed(
+          seedColor: dominant,
+          brightness: brightness,
+        );
+      });
+    }
+  }
+
+  bool _isLocalCover(String url) {
+    return !url.startsWith('http://') && !url.startsWith('https://');
   }
 
   Future<void> _download(Book book) async {
     setState(() => _isDownloading = true);
     try {
-      final server = ref.read(activeServerProvider).valueOrNull;
-      final password = server != null
+      final source = ref
+          .read(allSourcesProvider)
+          .valueOrNull
+          ?.where((s) => s.id == book.sourceId)
+          .firstOrNull;
+      final password = source != null
           ? await ref
-              .read(secureCredentialStoreProvider)
-              .readPassword(server.id)
+                .read(secureCredentialStoreProvider)
+                .readPassword(source.id)
           : null;
 
-      await ref.read(bookDownloadServiceProvider).download(
-            book,
-            username: server?.username,
-            password: password,
-          );
+      await ref
+          .read(bookDownloadServiceProvider)
+          .download(book, username: source?.username, password: password);
       ref.invalidate(bookDetailProvider(widget.bookId));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao baixar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao baixar: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDownloading = false);
@@ -184,9 +226,9 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       ref.invalidate(bookDetailProvider(widget.bookId));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao remover: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao remover: $e')));
       }
     }
   }
@@ -212,17 +254,21 @@ class _BookHeader extends StatelessWidget {
       );
     }
 
+    final isLocal = !book.coverUrl!.startsWith('http');
+
     return Stack(
       fit: StackFit.expand,
       children: [
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-          child: CachedNetworkImage(
-            imageUrl: book.coverUrl!,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => const ShimmerBox(),
-            errorWidget: (_, __, ___) => const SizedBox.shrink(),
-          ),
+          child: isLocal
+              ? Image.file(File(book.coverUrl!), fit: BoxFit.cover)
+              : CachedNetworkImage(
+                  imageUrl: book.coverUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => const ShimmerBox(),
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                ),
         ),
         Container(color: Colors.black54),
         Center(
@@ -232,17 +278,19 @@ class _BookHeader extends StatelessWidget {
               aspectRatio: 2 / 3,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                child: CachedNetworkImage(
-                  imageUrl: book.coverUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const ShimmerBox(),
-                  errorWidget: (_, __, ___) => Container(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    child: const Icon(Icons.menu_book_rounded, size: 48),
-                  ),
-                ),
+                child: isLocal
+                    ? Image.file(File(book.coverUrl!), fit: BoxFit.cover)
+                    : CachedNetworkImage(
+                        imageUrl: book.coverUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const ShimmerBox(),
+                        errorWidget: (_, __, ___) => Container(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.menu_book_rounded, size: 48),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -253,10 +301,11 @@ class _BookHeader extends StatelessWidget {
 }
 
 class _MetadataSection extends StatelessWidget {
-  const _MetadataSection({required this.book, this.progress});
+  const _MetadataSection({required this.book, this.progress, this.sourceName});
 
   final Book book;
   final ReadingProgressData? progress;
+  final String? sourceName;
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +338,7 @@ class _MetadataSection extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppTokens.spaceSm),
-          _StatsRow(book: book),
+          _StatsRow(book: book, sourceName: sourceName),
           if (progress != null && progress!.percentage > 0) ...[
             const SizedBox(height: AppTokens.spaceMd),
             _ProgressBar(progress: progress!),
@@ -301,9 +350,10 @@ class _MetadataSection extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.book});
+  const _StatsRow({required this.book, this.sourceName});
 
   final Book book;
+  final String? sourceName;
 
   @override
   Widget build(BuildContext context) {
@@ -311,18 +361,17 @@ class _StatsRow extends StatelessWidget {
     if (book.pageCount != null) chips.add('${book.pageCount} páginas');
     if (book.language != null) chips.add(book.language!);
     if (book.fileSizeKb != null) chips.add(_formatSize(book.fileSizeKb!));
+    if (sourceName != null) chips.add(sourceName!);
 
     if (chips.isEmpty) return const SizedBox.shrink();
 
     final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        );
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
 
     return Wrap(
       spacing: AppTokens.spaceMd,
-      children: chips
-          .map((c) => Text(c, style: style))
-          .toList(),
+      children: chips.map((c) => Text(c, style: style)).toList(),
     );
   }
 
@@ -370,6 +419,7 @@ class _ActionButtons extends StatelessWidget {
     required this.book,
     this.progress,
     required this.isDownloading,
+    required this.isLocal,
     required this.onRead,
     required this.onDownload,
     required this.onRemoveDownload,
@@ -378,6 +428,7 @@ class _ActionButtons extends StatelessWidget {
   final Book book;
   final ReadingProgressData? progress;
   final bool isDownloading;
+  final bool isLocal;
   final VoidCallback onRead;
   final VoidCallback onDownload;
   final VoidCallback onRemoveDownload;
@@ -386,6 +437,7 @@ class _ActionButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasProgress = progress != null && progress!.percentage > 0;
     final readLabel = hasProgress ? 'Continuar Lendo' : 'Começar a Ler';
+    final canRead = isLocal || book.isDownloaded;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
@@ -393,32 +445,36 @@ class _ActionButtons extends StatelessWidget {
         children: [
           Expanded(
             child: FilledButton.icon(
-              onPressed: book.isDownloaded ? onRead : null,
-              icon: Icon(hasProgress
-                  ? Icons.auto_stories_rounded
-                  : Icons.menu_book_rounded),
-              label: Text(book.isDownloaded ? readLabel : 'Baixar para Ler'),
+              onPressed: canRead ? onRead : null,
+              icon: Icon(
+                hasProgress
+                    ? Icons.auto_stories_rounded
+                    : Icons.menu_book_rounded,
+              ),
+              label: Text(canRead ? readLabel : 'Baixar para Ler'),
             ),
           ),
-          const SizedBox(width: AppTokens.spaceSm),
-          if (book.isDownloaded)
-            OutlinedButton.icon(
-              onPressed: onRemoveDownload,
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Remover'),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: isDownloading ? null : onDownload,
-              icon: isDownloading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.download_rounded),
-              label: Text(isDownloading ? 'Baixando...' : 'Baixar'),
-            ),
+          if (!isLocal) ...[
+            const SizedBox(width: AppTokens.spaceSm),
+            if (book.isDownloaded)
+              OutlinedButton.icon(
+                onPressed: onRemoveDownload,
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Remover'),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: isDownloading ? null : onDownload,
+                icon: isDownloading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded),
+                label: Text(isDownloading ? 'Baixando...' : 'Baixar'),
+              ),
+          ],
         ],
       ),
     );
@@ -441,10 +497,7 @@ class _DescriptionTab extends StatelessWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTokens.spaceMd),
-      child: Text(
-        description!,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
+      child: Text(description!, style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }
@@ -483,9 +536,7 @@ class _AnnotationsTab extends ConsumerWidget {
           itemCount: annotations.length,
           itemBuilder: (context, index) {
             final a = annotations[index];
-            final color = Color(
-              int.parse(a.color.replaceFirst('#', '0xFF')),
-            );
+            final color = Color(int.parse(a.color.replaceFirst('#', '0xFF')));
 
             return Dismissible(
               key: ValueKey(a.id),
@@ -497,7 +548,10 @@ class _AnnotationsTab extends ConsumerWidget {
                 child: const Icon(Icons.delete_rounded, color: Colors.white),
               ),
               onDismissed: (_) {
-                ref.read(databaseProvider).annotationsDao.deleteAnnotation(a.id);
+                ref
+                    .read(databaseProvider)
+                    .annotationsDao
+                    .deleteAnnotation(a.id);
               },
               child: InkWell(
                 onTap: () => context.go('/library/book/$bookId/read'),
@@ -523,9 +577,7 @@ class _AnnotationsTab extends ConsumerWidget {
                           children: [
                             Text(
                               '"${a.selectedText}"',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(fontStyle: FontStyle.italic),
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
@@ -534,13 +586,11 @@ class _AnnotationsTab extends ConsumerWidget {
                               const SizedBox(height: AppTokens.spaceXs),
                               Text(
                                 a.note!,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,

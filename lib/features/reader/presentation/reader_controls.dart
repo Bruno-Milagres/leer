@@ -98,8 +98,10 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.text_fields_rounded,
-                    color: Colors.white),
+                icon: const Icon(
+                  Icons.text_fields_rounded,
+                  color: Colors.white,
+                ),
                 onPressed: onSettingsTap,
               ),
             ],
@@ -170,18 +172,13 @@ void showReaderSettingsSheet(
 }) {
   showModalBottomSheet(
     context: context,
-    builder: (context) => _ReaderSettingsSheet(
-      settings: settings,
-      onChanged: onChanged,
-    ),
+    builder: (context) =>
+        _ReaderSettingsSheet(settings: settings, onChanged: onChanged),
   );
 }
 
 class _ReaderSettingsSheet extends StatefulWidget {
-  const _ReaderSettingsSheet({
-    required this.settings,
-    required this.onChanged,
-  });
+  const _ReaderSettingsSheet({required this.settings, required this.onChanged});
 
   final ReaderSettings settings;
   final ValueChanged<ReaderSettings> onChanged;
@@ -257,34 +254,34 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
               return ChoiceChip(
                 label: Text(f),
                 selected: f == _current.fontFamily,
-                onSelected: (_) =>
-                    _update(_current.copyWith(fontFamily: f)),
+                onSelected: (_) => _update(_current.copyWith(fontFamily: f)),
               );
             }).toList(),
           ),
           const SizedBox(height: AppTokens.spaceMd),
-          Text('Tamanho: ${_current.fontSize}px',
-              style: theme.textTheme.titleSmall),
+          Text(
+            'Tamanho: ${_current.fontSize}px',
+            style: theme.textTheme.titleSmall,
+          ),
           Slider(
             value: _current.fontSize.toDouble(),
             min: 12,
             max: 28,
             divisions: 16,
             label: '${_current.fontSize}',
-            onChanged: (v) =>
-                _update(_current.copyWith(fontSize: v.round())),
+            onChanged: (v) => _update(_current.copyWith(fontSize: v.round())),
           ),
           Text(
-              'Espaçamento: ${_current.lineSpacing.toStringAsFixed(1)}',
-              style: theme.textTheme.titleSmall),
+            'Espaçamento: ${_current.lineSpacing.toStringAsFixed(1)}',
+            style: theme.textTheme.titleSmall,
+          ),
           Slider(
             value: _current.lineSpacing,
             min: 1.0,
             max: 2.5,
             divisions: 15,
             label: _current.lineSpacing.toStringAsFixed(1),
-            onChanged: (v) =>
-                _update(_current.copyWith(lineSpacing: v)),
+            onChanged: (v) => _update(_current.copyWith(lineSpacing: v)),
           ),
         ],
       ),

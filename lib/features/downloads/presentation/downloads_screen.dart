@@ -36,7 +36,9 @@ class DownloadsScreen extends ConsumerWidget {
           }
 
           final totalKb = books.fold<int>(
-              0, (sum, b) => sum + (b.fileSizeKb ?? 0));
+            0,
+            (sum, b) => sum + (b.fileSizeKb ?? 0),
+          );
 
           return Column(
             children: [
@@ -68,10 +70,9 @@ class DownloadsScreen extends ConsumerWidget {
 
   void _deleteDownload(WidgetRef ref, Book book) {
     if (book.localEpubPath == null) return;
-    ref.read(bookDownloadServiceProvider).deleteDownload(
-          book.id,
-          book.localEpubPath!,
-        );
+    ref
+        .read(bookDownloadServiceProvider)
+        .deleteDownload(book.id, book.localEpubPath!);
   }
 }
 
@@ -95,8 +96,11 @@ class _TotalSizeHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.storage_rounded,
-              size: 20, color: theme.colorScheme.onSurfaceVariant),
+          Icon(
+            Icons.storage_rounded,
+            size: 20,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: AppTokens.spaceSm),
           Text(
             '$bookCount ${bookCount == 1 ? 'livro' : 'livros'} · $sizeText',
@@ -160,8 +164,8 @@ class _DownloadItem extends StatelessWidget {
     final theme = Theme.of(context);
     final sizeText = book.fileSizeKb != null
         ? (book.fileSizeKb! >= 1024
-            ? '${(book.fileSizeKb! / 1024).toStringAsFixed(1)} MB'
-            : '${book.fileSizeKb} KB')
+              ? '${(book.fileSizeKb! / 1024).toStringAsFixed(1)} MB'
+              : '${book.fileSizeKb} KB')
         : '—';
 
     return Dismissible(

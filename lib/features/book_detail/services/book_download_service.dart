@@ -13,11 +13,9 @@ class BookDownloadService {
   final Dio _dio;
   final BooksDao _booksDao;
 
-  Future<void> download(
-    Book book, {
-    String? username,
-    String? password,
-  }) async {
+  Future<void> download(Book book, {String? username, String? password}) async {
+    if (book.downloadUrl == null) return;
+
     final dir = await getApplicationDocumentsDirectory();
     final booksDir = Directory('${dir.path}/books');
     if (!booksDir.existsSync()) {
@@ -27,11 +25,9 @@ class BookDownloadService {
     final localPath = '${booksDir.path}/${book.id}.epub';
 
     await _dio.download(
-      book.opdsDownloadUrl,
+      book.downloadUrl!,
       localPath,
-      options: Options(
-        headers: _authHeaders(username, password),
-      ),
+      options: Options(headers: _authHeaders(username, password)),
     );
 
     await _booksDao.setDownloadState(

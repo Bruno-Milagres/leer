@@ -11,8 +11,10 @@ class ReaderBookData {
   final ReadingProgressData? progress;
 }
 
-final readerBookProvider =
-    FutureProvider.family<ReaderBookData?, int>((ref, bookId) async {
+final readerBookProvider = FutureProvider.family<ReaderBookData?, int>((
+  ref,
+  bookId,
+) async {
   final db = ref.watch(databaseProvider);
   final book = await db.booksDao.getById(bookId);
   if (book == null) return null;
@@ -40,13 +42,12 @@ class ReaderSettings {
     String? fontFamily,
     int? fontSize,
     double? lineSpacing,
-  }) =>
-      ReaderSettings(
-        theme: theme ?? this.theme,
-        fontFamily: fontFamily ?? this.fontFamily,
-        fontSize: fontSize ?? this.fontSize,
-        lineSpacing: lineSpacing ?? this.lineSpacing,
-      );
+  }) => ReaderSettings(
+    theme: theme ?? this.theme,
+    fontFamily: fontFamily ?? this.fontFamily,
+    fontSize: fontSize ?? this.fontSize,
+    lineSpacing: lineSpacing ?? this.lineSpacing,
+  );
 
   EpubDisplaySettings toDisplaySettings() {
     return EpubDisplaySettings(
@@ -67,22 +68,19 @@ class ReaderSettings {
         );
       case ReaderThemeType.sepia:
         return EpubTheme.custom(
-          backgroundDecoration:
-              const BoxDecoration(color: Color(0xFFF5E6CA)),
+          backgroundDecoration: const BoxDecoration(color: Color(0xFFF5E6CA)),
           foregroundColor: const Color(0xFF5B4636),
           customCss: _cssOverrides(),
         );
       case ReaderThemeType.dark:
         return EpubTheme.custom(
-          backgroundDecoration:
-              const BoxDecoration(color: Color(0xFF1C1917)),
+          backgroundDecoration: const BoxDecoration(color: Color(0xFF1C1917)),
           foregroundColor: const Color(0xFFD4D0CB),
           customCss: _cssOverrides(),
         );
       case ReaderThemeType.amoled:
         return EpubTheme.custom(
-          backgroundDecoration:
-              const BoxDecoration(color: Colors.black),
+          backgroundDecoration: const BoxDecoration(color: Colors.black),
           foregroundColor: const Color(0xFFB0B0B0),
           customCss: _cssOverrides(),
         );
@@ -90,11 +88,11 @@ class ReaderSettings {
   }
 
   Map<String, dynamic> _cssOverrides() => {
-        'body': {
-          'font-family': '$fontFamily, serif !important',
-          'line-height': '${lineSpacing}em !important',
-        },
-      };
+    'body': {
+      'font-family': '$fontFamily, serif !important',
+      'line-height': '${lineSpacing}em !important',
+    },
+  };
 }
 
 const readerFontFamilies = ['Literata', 'Georgia', 'Open Sans', 'Roboto Slab'];

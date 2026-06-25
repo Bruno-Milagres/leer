@@ -10,11 +10,14 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeServer = ref.watch(activeServerProvider);
+    final sourcesAsync = ref.watch(activeSourcesProvider);
     final readerSettings = ref.watch(readerSettingsProvider);
 
-    final serverSubtitle = activeServer.when(
-      data: (s) => s?.name ?? 'Nenhum servidor configurado',
+    final sourcesSubtitle = sourcesAsync.when(
+      data: (sources) {
+        if (sources.isEmpty) return 'Nenhuma fonte configurada';
+        return '${sources.length} ${sources.length == 1 ? 'fonte ativa' : 'fontes ativas'}';
+      },
       loading: () => 'Carregando...',
       error: (_, __) => 'Erro',
     );
@@ -27,10 +30,10 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         children: [
           ListTile(
-            leading: const Icon(Icons.dns_rounded),
-            title: const Text('Servidores'),
-            subtitle: Text(serverSubtitle),
-            onTap: () => context.go('/settings/server'),
+            leading: const Icon(Icons.library_books_rounded),
+            title: const Text('Fontes'),
+            subtitle: Text(sourcesSubtitle),
+            onTap: () => context.go('/settings/sources'),
           ),
           ListTile(
             leading: const Icon(Icons.menu_book_rounded),

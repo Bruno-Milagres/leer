@@ -65,8 +65,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Erro ao carregar livro',
-                  style: TextStyle(color: Colors.white70)),
+              const Text(
+                'Erro ao carregar livro',
+                style: TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -84,8 +86,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('EPUB não encontrado',
-                      style: TextStyle(color: Colors.white70)),
+                  const Text(
+                    'EPUB não encontrado',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -105,8 +109,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Arquivo EPUB não encontrado',
-                      style: TextStyle(color: Colors.white70)),
+                  const Text(
+                    'Arquivo EPUB não encontrado',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -166,8 +172,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   onTouchUp: (x, y) {
                     if (_selectedText != null) return;
                     if (x > 0.25 && x < 0.75 && y > 0.2 && y < 0.8) {
-                      setState(
-                          () => _controlsVisible = !_controlsVisible);
+                      setState(() => _controlsVisible = !_controlsVisible);
                     }
                   },
                 ),
@@ -204,8 +209,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   Future<void> _restoreHighlights() async {
     final db = ref.read(databaseProvider);
-    final annotations =
-        await db.annotationsDao.watchForBook(widget.bookId).first;
+    final annotations = await db.annotationsDao
+        .watchForBook(widget.bookId)
+        .first;
     for (final a in annotations) {
       _epubController.addHighlight(
         cfi: a.cfi,
@@ -220,14 +226,19 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final colorHex =
         '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
     final db = ref.read(databaseProvider);
-    db.annotationsDao.insertAnnotation(AnnotationsCompanion(
-      bookId: Value(widget.bookId),
-      cfi: Value(_selectedCfi!),
-      selectedText: Value(_selectedText!),
-      color: Value(colorHex),
-    ));
+    db.annotationsDao.insertAnnotation(
+      AnnotationsCompanion(
+        bookId: Value(widget.bookId),
+        cfi: Value(_selectedCfi!),
+        selectedText: Value(_selectedText!),
+        color: Value(colorHex),
+      ),
+    );
     _epubController.addHighlight(
-        cfi: _selectedCfi!, color: color, opacity: 0.3);
+      cfi: _selectedCfi!,
+      color: color,
+      opacity: 0.3,
+    );
     _epubController.clearSelection();
     setState(() {
       _selectedText = null;
@@ -250,8 +261,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           content: TextField(
             controller: controller,
             maxLines: 3,
-            decoration:
-                const InputDecoration(hintText: 'Digite sua nota...'),
+            decoration: const InputDecoration(hintText: 'Digite sua nota...'),
           ),
           actions: [
             TextButton(
@@ -268,15 +278,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     ).then((note) {
       if (note == null) return;
       final db = ref.read(databaseProvider);
-      db.annotationsDao.insertAnnotation(AnnotationsCompanion(
-        bookId: Value(widget.bookId),
-        cfi: Value(cfi),
-        selectedText: Value(text),
-        note: Value(note.isNotEmpty ? note : null),
-        color: Value('#FFB300'),
-      ));
+      db.annotationsDao.insertAnnotation(
+        AnnotationsCompanion(
+          bookId: Value(widget.bookId),
+          cfi: Value(cfi),
+          selectedText: Value(text),
+          note: Value(note.isNotEmpty ? note : null),
+          color: Value('#FFB300'),
+        ),
+      );
       _epubController.addHighlight(
-          cfi: cfi, color: AppColors.highlightYellow, opacity: 0.3);
+        cfi: cfi,
+        color: AppColors.highlightYellow,
+        opacity: 0.3,
+      );
       _epubController.clearSelection();
       setState(() {
         _selectedText = null;
@@ -295,9 +310,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       _selectedCfi = null;
       _selectionRect = null;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Texto copiado')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Texto copiado')));
   }
 
   void _openSettings(ReaderSettings current) {
@@ -308,9 +323,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ref.read(readerSettingsProvider.notifier).state = newSettings;
         if (_epubLoaded) {
           _epubController.setFontSize(
-              fontSize: newSettings.fontSize.toDouble());
+            fontSize: newSettings.fontSize.toDouble(),
+          );
           _epubController.updateTheme(
-              theme: newSettings.toDisplaySettings().theme!);
+            theme: newSettings.toDisplaySettings().theme!,
+          );
         }
       },
     );
@@ -329,10 +346,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   void _saveProgressSync() {
     _debounceTimer?.cancel();
     if (_currentCfi != null) {
-      _saveProgress(
-        cfi: _currentCfi!,
-        percentage: (_progress * 100).round(),
-      );
+      _saveProgress(cfi: _currentCfi!, percentage: (_progress * 100).round());
     }
   }
 
@@ -379,10 +393,9 @@ class _SelectionMenu extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ...AppColors.highlightColors.map((c) => _ColorDot(
-                    color: c,
-                    onTap: () => onHighlight(c),
-                  )),
+              ...AppColors.highlightColors.map(
+                (c) => _ColorDot(color: c, onTap: () => onHighlight(c)),
+              ),
               const SizedBox(width: 4),
               _MenuButton(
                 icon: Icons.edit_note_rounded,
@@ -450,8 +463,10 @@ class _MenuButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 20, color: Colors.white70),
-            Text(label,
-                style: const TextStyle(fontSize: 10, color: Colors.white70)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: Colors.white70),
+            ),
           ],
         ),
       ),

@@ -42,14 +42,17 @@ class LibraryScreen extends ConsumerWidget {
                   return const SliverFillRemaining(
                     child: EmptyStateView(
                       title: 'Nenhum livro encontrado',
-                      message:
-                          'Puxe para baixo para sincronizar com o servidor',
+                      message: 'Puxe para baixo para sincronizar suas fontes',
                     ),
                   );
                 }
 
                 if (filter == LibraryFilter.bySeries) {
                   return _SeriesGroupedList(books: books, ref: ref);
+                }
+
+                if (filter == LibraryFilter.bySource) {
+                  return _SourceGroupedList(books: books, ref: ref);
                 }
 
                 return _BooksGrid(books: books, ref: ref);
@@ -62,28 +65,13 @@ class LibraryScreen extends ConsumerWidget {
   }
 
   Future<void> _onRefresh(BuildContext context, WidgetRef ref) async {
-    final server = ref.read(activeServerProvider).valueOrNull;
-    if (server == null) return;
-
-    final credentials = ref.read(secureCredentialStoreProvider);
-    final password = await credentials.readPassword(server.id);
-    final opds = ref.read(opdsClientProvider);
-    final syncService = ref.read(librarySyncServiceProvider);
-
     try {
-      final entries = await opds.fetchCatalog(
-        baseUrl: server.url,
-        username: server.username,
-        password: password,
-      );
-      await syncService.sync(server.id, entries);
+      await ref.read(libraryRepositoryProvider).refreshAll();
     } catch (e) {
       if (!context.mounted) return;
-      final message = e.toString().contains('unauthorized')
-          ? 'Credenciais inválidas — verifique as configurações'
-          : 'Erro ao sincronizar: $e';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao sincronizar: $e')));
     }
   }
 }
@@ -99,6 +87,7 @@ class _FilterChipsBar extends StatelessWidget {
     LibraryFilter.reading: 'Lendo',
     LibraryFilter.downloaded: 'Baixados',
     LibraryFilter.bySeries: 'Por Série',
+    LibraryFilter.bySource: 'Por Fonte',
   };
 
   @override
@@ -133,7 +122,7 @@ class _BooksGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final server = ref.read(activeServerProvider).valueOrNull;
+    final sourceCount = ref.read(activeSourceCountProvider);
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
@@ -144,18 +133,15 @@ class _BooksGrid extends StatelessWidget {
           crossAxisSpacing: AppTokens.spaceMd,
           childAspectRatio: 0.55,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final (book, progress) = books[index];
-            return BookCard(
-              book: book,
-              progress: progress,
-              serverUsername: server?.username,
-              onTap: () => context.go('/library/book/${book.id}'),
-            );
-          },
-          childCount: books.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final (book, progress) = books[index];
+          return BookCard(
+            book: book,
+            progress: progress,
+            showSourceBadge: sourceCount > 1,
+            onTap: () => context.go('/library/book/${book.id}'),
+          );
+        }, childCount: books.length),
       ),
     );
   }
@@ -182,58 +168,130 @@ class _SeriesGroupedList extends StatelessWidget {
         return a.compareTo(b);
       });
 
-    final server = ref.read(activeServerProvider).valueOrNull;
+    final sourceCount = ref.read(activeSourceCountProvider);
     final theme = Theme.of(context);
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final key = sortedKeys[index];
-            final groupBooks = groups[key]!;
-            final seriesName = key == '\x00' ? 'Sem série' : key;
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final key = sortedKeys[index];
+          final groupBooks = groups[key]!;
+          final seriesName = key == '\x00' ? 'Sem série' : key;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (index > 0) const SizedBox(height: AppTokens.spaceLg),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppTokens.spaceSm),
-                  child: Text(
-                    seriesName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (index > 0) const SizedBox(height: AppTokens.spaceLg),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppTokens.spaceSm,
+                ),
+                child: Text(
+                  seriesName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: AppTokens.libraryGridColumns,
-                    mainAxisSpacing: AppTokens.spaceMd,
-                    crossAxisSpacing: AppTokens.spaceMd,
-                    childAspectRatio: 0.55,
-                  ),
-                  itemCount: groupBooks.length,
-                  itemBuilder: (context, i) {
-                    final (book, progress) = groupBooks[i];
-                    return BookCard(
-                      book: book,
-                      progress: progress,
-                      serverUsername: server?.username,
-                      onTap: () => context.go('/library/book/${book.id}'),
-                    );
-                  },
+              ),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: AppTokens.libraryGridColumns,
+                  mainAxisSpacing: AppTokens.spaceMd,
+                  crossAxisSpacing: AppTokens.spaceMd,
+                  childAspectRatio: 0.55,
                 ),
-              ],
-            );
-          },
-          childCount: sortedKeys.length,
-        ),
+                itemCount: groupBooks.length,
+                itemBuilder: (context, i) {
+                  final (book, progress) = groupBooks[i];
+                  return BookCard(
+                    book: book,
+                    progress: progress,
+                    showSourceBadge: sourceCount > 1,
+                    onTap: () => context.go('/library/book/${book.id}'),
+                  );
+                },
+              ),
+            ],
+          );
+        }, childCount: sortedKeys.length),
+      ),
+    );
+  }
+}
+
+class _SourceGroupedList extends ConsumerWidget {
+  const _SourceGroupedList({required this.books, required this.ref});
+
+  final List<BookWithProgress> books;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context, WidgetRef widgetRef) {
+    final sourcesAsync = widgetRef.watch(allSourcesProvider);
+    final sourceNames = <int, String>{};
+    if (sourcesAsync.hasValue) {
+      for (final s in sourcesAsync.value!) {
+        sourceNames[s.id] = s.name;
+      }
+    }
+
+    final groups = <int, List<BookWithProgress>>{};
+    for (final entry in books) {
+      (groups[entry.$1.sourceId] ??= []).add(entry);
+    }
+
+    final sortedKeys = groups.keys.toList()..sort();
+    final theme = Theme.of(context);
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final sourceId = sortedKeys[index];
+          final groupBooks = groups[sourceId]!;
+          final sourceName = sourceNames[sourceId] ?? 'Fonte $sourceId';
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (index > 0) const SizedBox(height: AppTokens.spaceLg),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppTokens.spaceSm,
+                ),
+                child: Text(
+                  sourceName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: AppTokens.libraryGridColumns,
+                  mainAxisSpacing: AppTokens.spaceMd,
+                  crossAxisSpacing: AppTokens.spaceMd,
+                  childAspectRatio: 0.55,
+                ),
+                itemCount: groupBooks.length,
+                itemBuilder: (context, i) {
+                  final (book, progress) = groupBooks[i];
+                  return BookCard(
+                    book: book,
+                    progress: progress,
+                    showSourceBadge: false,
+                    onTap: () => context.go('/library/book/${book.id}'),
+                  );
+                },
+              ),
+            ],
+          );
+        }, childCount: sortedKeys.length),
       ),
     );
   }

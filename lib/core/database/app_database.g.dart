@@ -3,11 +3,11 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
+class $SourcesTable extends Sources with TableInfo<$SourcesTable, Source> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ServersTable(this.attachedDatabase, [this._alias]);
+  $SourcesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -20,6 +20,15 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
@@ -35,9 +44,9 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   late final GeneratedColumn<String> url = GeneratedColumn<String>(
     'url',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _usernameMeta = const VerificationMeta(
     'username',
@@ -49,6 +58,21 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hasCredentialsMeta = const VerificationMeta(
+    'hasCredentials',
+  );
+  @override
+  late final GeneratedColumn<bool> hasCredentials = GeneratedColumn<bool>(
+    'has_credentials',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_credentials" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
@@ -80,9 +104,11 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    type,
     name,
     url,
     username,
+    hasCredentials,
     isActive,
     createdAt,
   ];
@@ -90,16 +116,24 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'servers';
+  static const String $name = 'sources';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Server> instance, {
+    Insertable<Source> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -114,13 +148,20 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
         _urlMeta,
         url.isAcceptableOrUnknown(data['url']!, _urlMeta),
       );
-    } else if (isInserting) {
-      context.missing(_urlMeta);
     }
     if (data.containsKey('username')) {
       context.handle(
         _usernameMeta,
         username.isAcceptableOrUnknown(data['username']!, _usernameMeta),
+      );
+    }
+    if (data.containsKey('has_credentials')) {
+      context.handle(
+        _hasCredentialsMeta,
+        hasCredentials.isAcceptableOrUnknown(
+          data['has_credentials']!,
+          _hasCredentialsMeta,
+        ),
       );
     }
     if (data.containsKey('is_active')) {
@@ -141,12 +182,16 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Server map(Map<String, dynamic> data, {String? tablePrefix}) {
+  Source map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Server(
+    return Source(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
       )!,
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -155,11 +200,15 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
       url: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}url'],
-      )!,
+      ),
       username: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}username'],
       ),
+      hasCredentials: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_credentials'],
+      )!,
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -172,23 +221,27 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   }
 
   @override
-  $ServersTable createAlias(String alias) {
-    return $ServersTable(attachedDatabase, alias);
+  $SourcesTable createAlias(String alias) {
+    return $SourcesTable(attachedDatabase, alias);
   }
 }
 
-class Server extends DataClass implements Insertable<Server> {
+class Source extends DataClass implements Insertable<Source> {
   final int id;
+  final String type;
   final String name;
-  final String url;
+  final String? url;
   final String? username;
+  final bool hasCredentials;
   final bool isActive;
   final DateTime createdAt;
-  const Server({
+  const Source({
     required this.id,
+    required this.type,
     required this.name,
-    required this.url,
+    this.url,
     this.username,
+    required this.hasCredentials,
     required this.isActive,
     required this.createdAt,
   });
@@ -196,39 +249,47 @@ class Server extends DataClass implements Insertable<Server> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['type'] = Variable<String>(type);
     map['name'] = Variable<String>(name);
-    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || url != null) {
+      map['url'] = Variable<String>(url);
+    }
     if (!nullToAbsent || username != null) {
       map['username'] = Variable<String>(username);
     }
+    map['has_credentials'] = Variable<bool>(hasCredentials);
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
-  ServersCompanion toCompanion(bool nullToAbsent) {
-    return ServersCompanion(
+  SourcesCompanion toCompanion(bool nullToAbsent) {
+    return SourcesCompanion(
       id: Value(id),
+      type: Value(type),
       name: Value(name),
-      url: Value(url),
+      url: url == null && nullToAbsent ? const Value.absent() : Value(url),
       username: username == null && nullToAbsent
           ? const Value.absent()
           : Value(username),
+      hasCredentials: Value(hasCredentials),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
     );
   }
 
-  factory Server.fromJson(
+  factory Source.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Server(
+    return Source(
       id: serializer.fromJson<int>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
       name: serializer.fromJson<String>(json['name']),
-      url: serializer.fromJson<String>(json['url']),
+      url: serializer.fromJson<String?>(json['url']),
       username: serializer.fromJson<String?>(json['username']),
+      hasCredentials: serializer.fromJson<bool>(json['hasCredentials']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -238,35 +299,45 @@ class Server extends DataClass implements Insertable<Server> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'type': serializer.toJson<String>(type),
       'name': serializer.toJson<String>(name),
-      'url': serializer.toJson<String>(url),
+      'url': serializer.toJson<String?>(url),
       'username': serializer.toJson<String?>(username),
+      'hasCredentials': serializer.toJson<bool>(hasCredentials),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
-  Server copyWith({
+  Source copyWith({
     int? id,
+    String? type,
     String? name,
-    String? url,
+    Value<String?> url = const Value.absent(),
     Value<String?> username = const Value.absent(),
+    bool? hasCredentials,
     bool? isActive,
     DateTime? createdAt,
-  }) => Server(
+  }) => Source(
     id: id ?? this.id,
+    type: type ?? this.type,
     name: name ?? this.name,
-    url: url ?? this.url,
+    url: url.present ? url.value : this.url,
     username: username.present ? username.value : this.username,
+    hasCredentials: hasCredentials ?? this.hasCredentials,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
   );
-  Server copyWithCompanion(ServersCompanion data) {
-    return Server(
+  Source copyWithCompanion(SourcesCompanion data) {
+    return Source(
       id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
       name: data.name.present ? data.name.value : this.name,
       url: data.url.present ? data.url.value : this.url,
       username: data.username.present ? data.username.value : this.username,
+      hasCredentials: data.hasCredentials.present
+          ? data.hasCredentials.value
+          : this.hasCredentials,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -274,11 +345,13 @@ class Server extends DataClass implements Insertable<Server> {
 
   @override
   String toString() {
-    return (StringBuffer('Server(')
+    return (StringBuffer('Source(')
           ..write('id: $id, ')
+          ..write('type: $type, ')
           ..write('name: $name, ')
           ..write('url: $url, ')
           ..write('username: $username, ')
+          ..write('hasCredentials: $hasCredentials, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -286,74 +359,99 @@ class Server extends DataClass implements Insertable<Server> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, url, username, isActive, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    type,
+    name,
+    url,
+    username,
+    hasCredentials,
+    isActive,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Server &&
+      (other is Source &&
           other.id == this.id &&
+          other.type == this.type &&
           other.name == this.name &&
           other.url == this.url &&
           other.username == this.username &&
+          other.hasCredentials == this.hasCredentials &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt);
 }
 
-class ServersCompanion extends UpdateCompanion<Server> {
+class SourcesCompanion extends UpdateCompanion<Source> {
   final Value<int> id;
+  final Value<String> type;
   final Value<String> name;
-  final Value<String> url;
+  final Value<String?> url;
   final Value<String?> username;
+  final Value<bool> hasCredentials;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
-  const ServersCompanion({
+  const SourcesCompanion({
     this.id = const Value.absent(),
+    this.type = const Value.absent(),
     this.name = const Value.absent(),
     this.url = const Value.absent(),
     this.username = const Value.absent(),
+    this.hasCredentials = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
-  ServersCompanion.insert({
+  SourcesCompanion.insert({
     this.id = const Value.absent(),
+    required String type,
     required String name,
-    required String url,
+    this.url = const Value.absent(),
     this.username = const Value.absent(),
+    this.hasCredentials = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
-  }) : name = Value(name),
-       url = Value(url);
-  static Insertable<Server> custom({
+  }) : type = Value(type),
+       name = Value(name);
+  static Insertable<Source> custom({
     Expression<int>? id,
+    Expression<String>? type,
     Expression<String>? name,
     Expression<String>? url,
     Expression<String>? username,
+    Expression<bool>? hasCredentials,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (type != null) 'type': type,
       if (name != null) 'name': name,
       if (url != null) 'url': url,
       if (username != null) 'username': username,
+      if (hasCredentials != null) 'has_credentials': hasCredentials,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
 
-  ServersCompanion copyWith({
+  SourcesCompanion copyWith({
     Value<int>? id,
+    Value<String>? type,
     Value<String>? name,
-    Value<String>? url,
+    Value<String?>? url,
     Value<String?>? username,
+    Value<bool>? hasCredentials,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
   }) {
-    return ServersCompanion(
+    return SourcesCompanion(
       id: id ?? this.id,
+      type: type ?? this.type,
       name: name ?? this.name,
       url: url ?? this.url,
       username: username ?? this.username,
+      hasCredentials: hasCredentials ?? this.hasCredentials,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -365,6 +463,9 @@ class ServersCompanion extends UpdateCompanion<Server> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
@@ -373,6 +474,9 @@ class ServersCompanion extends UpdateCompanion<Server> {
     }
     if (username.present) {
       map['username'] = Variable<String>(username.value);
+    }
+    if (hasCredentials.present) {
+      map['has_credentials'] = Variable<bool>(hasCredentials.value);
     }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
@@ -385,11 +489,13 @@ class ServersCompanion extends UpdateCompanion<Server> {
 
   @override
   String toString() {
-    return (StringBuffer('ServersCompanion(')
+    return (StringBuffer('SourcesCompanion(')
           ..write('id: $id, ')
+          ..write('type: $type, ')
           ..write('name: $name, ')
           ..write('url: $url, ')
           ..write('username: $username, ')
+          ..write('hasCredentials: $hasCredentials, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -415,26 +521,26 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
-  static const VerificationMeta _serverIdMeta = const VerificationMeta(
-    'serverId',
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
   );
   @override
-  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
-    'server_id',
+  late final GeneratedColumn<int> sourceId = GeneratedColumn<int>(
+    'source_id',
     aliasedName,
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES servers (id) ON DELETE CASCADE',
+      'REFERENCES sources (id) ON DELETE CASCADE',
     ),
   );
-  static const VerificationMeta _calibreIdMeta = const VerificationMeta(
-    'calibreId',
+  static const VerificationMeta _externalIdMeta = const VerificationMeta(
+    'externalId',
   );
   @override
-  late final GeneratedColumn<String> calibreId = GeneratedColumn<String>(
-    'calibre_id',
+  late final GeneratedColumn<String> externalId = GeneratedColumn<String>(
+    'external_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -489,16 +595,16 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _opdsDownloadUrlMeta = const VerificationMeta(
-    'opdsDownloadUrl',
+  static const VerificationMeta _downloadUrlMeta = const VerificationMeta(
+    'downloadUrl',
   );
   @override
-  late final GeneratedColumn<String> opdsDownloadUrl = GeneratedColumn<String>(
-    'opds_download_url',
+  late final GeneratedColumn<String> downloadUrl = GeneratedColumn<String>(
+    'download_url',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _localEpubPathMeta = const VerificationMeta(
     'localEpubPath',
@@ -606,14 +712,14 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    serverId,
-    calibreId,
+    sourceId,
+    externalId,
     title,
     author,
     series,
     seriesIndex,
     coverUrl,
-    opdsDownloadUrl,
+    downloadUrl,
     localEpubPath,
     isDownloaded,
     language,
@@ -639,21 +745,21 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('server_id')) {
+    if (data.containsKey('source_id')) {
       context.handle(
-        _serverIdMeta,
-        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_serverIdMeta);
+      context.missing(_sourceIdMeta);
     }
-    if (data.containsKey('calibre_id')) {
+    if (data.containsKey('external_id')) {
       context.handle(
-        _calibreIdMeta,
-        calibreId.isAcceptableOrUnknown(data['calibre_id']!, _calibreIdMeta),
+        _externalIdMeta,
+        externalId.isAcceptableOrUnknown(data['external_id']!, _externalIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_calibreIdMeta);
+      context.missing(_externalIdMeta);
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -690,16 +796,14 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         coverUrl.isAcceptableOrUnknown(data['cover_url']!, _coverUrlMeta),
       );
     }
-    if (data.containsKey('opds_download_url')) {
+    if (data.containsKey('download_url')) {
       context.handle(
-        _opdsDownloadUrlMeta,
-        opdsDownloadUrl.isAcceptableOrUnknown(
-          data['opds_download_url']!,
-          _opdsDownloadUrlMeta,
+        _downloadUrlMeta,
+        downloadUrl.isAcceptableOrUnknown(
+          data['download_url']!,
+          _downloadUrlMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_opdsDownloadUrlMeta);
     }
     if (data.containsKey('local_epub_path')) {
       context.handle(
@@ -780,13 +884,13 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      serverId: attachedDatabase.typeMapping.read(
+      sourceId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}server_id'],
+        data['${effectivePrefix}source_id'],
       )!,
-      calibreId: attachedDatabase.typeMapping.read(
+      externalId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}calibre_id'],
+        data['${effectivePrefix}external_id'],
       )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -808,10 +912,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         DriftSqlType.string,
         data['${effectivePrefix}cover_url'],
       ),
-      opdsDownloadUrl: attachedDatabase.typeMapping.read(
+      downloadUrl: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}opds_download_url'],
-      )!,
+        data['${effectivePrefix}download_url'],
+      ),
       localEpubPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}local_epub_path'],
@@ -859,14 +963,14 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
 
 class Book extends DataClass implements Insertable<Book> {
   final int id;
-  final int serverId;
-  final String calibreId;
+  final int sourceId;
+  final String externalId;
   final String title;
   final String? author;
   final String? series;
   final double? seriesIndex;
   final String? coverUrl;
-  final String opdsDownloadUrl;
+  final String? downloadUrl;
   final String? localEpubPath;
   final bool isDownloaded;
   final String? language;
@@ -878,14 +982,14 @@ class Book extends DataClass implements Insertable<Book> {
   final DateTime syncedAt;
   const Book({
     required this.id,
-    required this.serverId,
-    required this.calibreId,
+    required this.sourceId,
+    required this.externalId,
     required this.title,
     this.author,
     this.series,
     this.seriesIndex,
     this.coverUrl,
-    required this.opdsDownloadUrl,
+    this.downloadUrl,
     this.localEpubPath,
     required this.isDownloaded,
     this.language,
@@ -900,8 +1004,8 @@ class Book extends DataClass implements Insertable<Book> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['server_id'] = Variable<int>(serverId);
-    map['calibre_id'] = Variable<String>(calibreId);
+    map['source_id'] = Variable<int>(sourceId);
+    map['external_id'] = Variable<String>(externalId);
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || author != null) {
       map['author'] = Variable<String>(author);
@@ -915,7 +1019,9 @@ class Book extends DataClass implements Insertable<Book> {
     if (!nullToAbsent || coverUrl != null) {
       map['cover_url'] = Variable<String>(coverUrl);
     }
-    map['opds_download_url'] = Variable<String>(opdsDownloadUrl);
+    if (!nullToAbsent || downloadUrl != null) {
+      map['download_url'] = Variable<String>(downloadUrl);
+    }
     if (!nullToAbsent || localEpubPath != null) {
       map['local_epub_path'] = Variable<String>(localEpubPath);
     }
@@ -943,8 +1049,8 @@ class Book extends DataClass implements Insertable<Book> {
   BooksCompanion toCompanion(bool nullToAbsent) {
     return BooksCompanion(
       id: Value(id),
-      serverId: Value(serverId),
-      calibreId: Value(calibreId),
+      sourceId: Value(sourceId),
+      externalId: Value(externalId),
       title: Value(title),
       author: author == null && nullToAbsent
           ? const Value.absent()
@@ -958,7 +1064,9 @@ class Book extends DataClass implements Insertable<Book> {
       coverUrl: coverUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverUrl),
-      opdsDownloadUrl: Value(opdsDownloadUrl),
+      downloadUrl: downloadUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(downloadUrl),
       localEpubPath: localEpubPath == null && nullToAbsent
           ? const Value.absent()
           : Value(localEpubPath),
@@ -988,14 +1096,14 @@ class Book extends DataClass implements Insertable<Book> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Book(
       id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<int>(json['serverId']),
-      calibreId: serializer.fromJson<String>(json['calibreId']),
+      sourceId: serializer.fromJson<int>(json['sourceId']),
+      externalId: serializer.fromJson<String>(json['externalId']),
       title: serializer.fromJson<String>(json['title']),
       author: serializer.fromJson<String?>(json['author']),
       series: serializer.fromJson<String?>(json['series']),
       seriesIndex: serializer.fromJson<double?>(json['seriesIndex']),
       coverUrl: serializer.fromJson<String?>(json['coverUrl']),
-      opdsDownloadUrl: serializer.fromJson<String>(json['opdsDownloadUrl']),
+      downloadUrl: serializer.fromJson<String?>(json['downloadUrl']),
       localEpubPath: serializer.fromJson<String?>(json['localEpubPath']),
       isDownloaded: serializer.fromJson<bool>(json['isDownloaded']),
       language: serializer.fromJson<String?>(json['language']),
@@ -1012,14 +1120,14 @@ class Book extends DataClass implements Insertable<Book> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'serverId': serializer.toJson<int>(serverId),
-      'calibreId': serializer.toJson<String>(calibreId),
+      'sourceId': serializer.toJson<int>(sourceId),
+      'externalId': serializer.toJson<String>(externalId),
       'title': serializer.toJson<String>(title),
       'author': serializer.toJson<String?>(author),
       'series': serializer.toJson<String?>(series),
       'seriesIndex': serializer.toJson<double?>(seriesIndex),
       'coverUrl': serializer.toJson<String?>(coverUrl),
-      'opdsDownloadUrl': serializer.toJson<String>(opdsDownloadUrl),
+      'downloadUrl': serializer.toJson<String?>(downloadUrl),
       'localEpubPath': serializer.toJson<String?>(localEpubPath),
       'isDownloaded': serializer.toJson<bool>(isDownloaded),
       'language': serializer.toJson<String?>(language),
@@ -1034,14 +1142,14 @@ class Book extends DataClass implements Insertable<Book> {
 
   Book copyWith({
     int? id,
-    int? serverId,
-    String? calibreId,
+    int? sourceId,
+    String? externalId,
     String? title,
     Value<String?> author = const Value.absent(),
     Value<String?> series = const Value.absent(),
     Value<double?> seriesIndex = const Value.absent(),
     Value<String?> coverUrl = const Value.absent(),
-    String? opdsDownloadUrl,
+    Value<String?> downloadUrl = const Value.absent(),
     Value<String?> localEpubPath = const Value.absent(),
     bool? isDownloaded,
     Value<String?> language = const Value.absent(),
@@ -1053,14 +1161,14 @@ class Book extends DataClass implements Insertable<Book> {
     DateTime? syncedAt,
   }) => Book(
     id: id ?? this.id,
-    serverId: serverId ?? this.serverId,
-    calibreId: calibreId ?? this.calibreId,
+    sourceId: sourceId ?? this.sourceId,
+    externalId: externalId ?? this.externalId,
     title: title ?? this.title,
     author: author.present ? author.value : this.author,
     series: series.present ? series.value : this.series,
     seriesIndex: seriesIndex.present ? seriesIndex.value : this.seriesIndex,
     coverUrl: coverUrl.present ? coverUrl.value : this.coverUrl,
-    opdsDownloadUrl: opdsDownloadUrl ?? this.opdsDownloadUrl,
+    downloadUrl: downloadUrl.present ? downloadUrl.value : this.downloadUrl,
     localEpubPath: localEpubPath.present
         ? localEpubPath.value
         : this.localEpubPath,
@@ -1076,8 +1184,10 @@ class Book extends DataClass implements Insertable<Book> {
   Book copyWithCompanion(BooksCompanion data) {
     return Book(
       id: data.id.present ? data.id.value : this.id,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      calibreId: data.calibreId.present ? data.calibreId.value : this.calibreId,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      externalId: data.externalId.present
+          ? data.externalId.value
+          : this.externalId,
       title: data.title.present ? data.title.value : this.title,
       author: data.author.present ? data.author.value : this.author,
       series: data.series.present ? data.series.value : this.series,
@@ -1085,9 +1195,9 @@ class Book extends DataClass implements Insertable<Book> {
           ? data.seriesIndex.value
           : this.seriesIndex,
       coverUrl: data.coverUrl.present ? data.coverUrl.value : this.coverUrl,
-      opdsDownloadUrl: data.opdsDownloadUrl.present
-          ? data.opdsDownloadUrl.value
-          : this.opdsDownloadUrl,
+      downloadUrl: data.downloadUrl.present
+          ? data.downloadUrl.value
+          : this.downloadUrl,
       localEpubPath: data.localEpubPath.present
           ? data.localEpubPath.value
           : this.localEpubPath,
@@ -1112,14 +1222,14 @@ class Book extends DataClass implements Insertable<Book> {
   String toString() {
     return (StringBuffer('Book(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('calibreId: $calibreId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('externalId: $externalId, ')
           ..write('title: $title, ')
           ..write('author: $author, ')
           ..write('series: $series, ')
           ..write('seriesIndex: $seriesIndex, ')
           ..write('coverUrl: $coverUrl, ')
-          ..write('opdsDownloadUrl: $opdsDownloadUrl, ')
+          ..write('downloadUrl: $downloadUrl, ')
           ..write('localEpubPath: $localEpubPath, ')
           ..write('isDownloaded: $isDownloaded, ')
           ..write('language: $language, ')
@@ -1136,14 +1246,14 @@ class Book extends DataClass implements Insertable<Book> {
   @override
   int get hashCode => Object.hash(
     id,
-    serverId,
-    calibreId,
+    sourceId,
+    externalId,
     title,
     author,
     series,
     seriesIndex,
     coverUrl,
-    opdsDownloadUrl,
+    downloadUrl,
     localEpubPath,
     isDownloaded,
     language,
@@ -1159,14 +1269,14 @@ class Book extends DataClass implements Insertable<Book> {
       identical(this, other) ||
       (other is Book &&
           other.id == this.id &&
-          other.serverId == this.serverId &&
-          other.calibreId == this.calibreId &&
+          other.sourceId == this.sourceId &&
+          other.externalId == this.externalId &&
           other.title == this.title &&
           other.author == this.author &&
           other.series == this.series &&
           other.seriesIndex == this.seriesIndex &&
           other.coverUrl == this.coverUrl &&
-          other.opdsDownloadUrl == this.opdsDownloadUrl &&
+          other.downloadUrl == this.downloadUrl &&
           other.localEpubPath == this.localEpubPath &&
           other.isDownloaded == this.isDownloaded &&
           other.language == this.language &&
@@ -1180,14 +1290,14 @@ class Book extends DataClass implements Insertable<Book> {
 
 class BooksCompanion extends UpdateCompanion<Book> {
   final Value<int> id;
-  final Value<int> serverId;
-  final Value<String> calibreId;
+  final Value<int> sourceId;
+  final Value<String> externalId;
   final Value<String> title;
   final Value<String?> author;
   final Value<String?> series;
   final Value<double?> seriesIndex;
   final Value<String?> coverUrl;
-  final Value<String> opdsDownloadUrl;
+  final Value<String?> downloadUrl;
   final Value<String?> localEpubPath;
   final Value<bool> isDownloaded;
   final Value<String?> language;
@@ -1199,14 +1309,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<DateTime> syncedAt;
   const BooksCompanion({
     this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.calibreId = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.externalId = const Value.absent(),
     this.title = const Value.absent(),
     this.author = const Value.absent(),
     this.series = const Value.absent(),
     this.seriesIndex = const Value.absent(),
     this.coverUrl = const Value.absent(),
-    this.opdsDownloadUrl = const Value.absent(),
+    this.downloadUrl = const Value.absent(),
     this.localEpubPath = const Value.absent(),
     this.isDownloaded = const Value.absent(),
     this.language = const Value.absent(),
@@ -1219,14 +1329,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
   });
   BooksCompanion.insert({
     this.id = const Value.absent(),
-    required int serverId,
-    required String calibreId,
+    required int sourceId,
+    required String externalId,
     required String title,
     this.author = const Value.absent(),
     this.series = const Value.absent(),
     this.seriesIndex = const Value.absent(),
     this.coverUrl = const Value.absent(),
-    required String opdsDownloadUrl,
+    this.downloadUrl = const Value.absent(),
     this.localEpubPath = const Value.absent(),
     this.isDownloaded = const Value.absent(),
     this.language = const Value.absent(),
@@ -1236,20 +1346,19 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.tags = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.syncedAt = const Value.absent(),
-  }) : serverId = Value(serverId),
-       calibreId = Value(calibreId),
-       title = Value(title),
-       opdsDownloadUrl = Value(opdsDownloadUrl);
+  }) : sourceId = Value(sourceId),
+       externalId = Value(externalId),
+       title = Value(title);
   static Insertable<Book> custom({
     Expression<int>? id,
-    Expression<int>? serverId,
-    Expression<String>? calibreId,
+    Expression<int>? sourceId,
+    Expression<String>? externalId,
     Expression<String>? title,
     Expression<String>? author,
     Expression<String>? series,
     Expression<double>? seriesIndex,
     Expression<String>? coverUrl,
-    Expression<String>? opdsDownloadUrl,
+    Expression<String>? downloadUrl,
     Expression<String>? localEpubPath,
     Expression<bool>? isDownloaded,
     Expression<String>? language,
@@ -1262,14 +1371,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (serverId != null) 'server_id': serverId,
-      if (calibreId != null) 'calibre_id': calibreId,
+      if (sourceId != null) 'source_id': sourceId,
+      if (externalId != null) 'external_id': externalId,
       if (title != null) 'title': title,
       if (author != null) 'author': author,
       if (series != null) 'series': series,
       if (seriesIndex != null) 'series_index': seriesIndex,
       if (coverUrl != null) 'cover_url': coverUrl,
-      if (opdsDownloadUrl != null) 'opds_download_url': opdsDownloadUrl,
+      if (downloadUrl != null) 'download_url': downloadUrl,
       if (localEpubPath != null) 'local_epub_path': localEpubPath,
       if (isDownloaded != null) 'is_downloaded': isDownloaded,
       if (language != null) 'language': language,
@@ -1284,14 +1393,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
 
   BooksCompanion copyWith({
     Value<int>? id,
-    Value<int>? serverId,
-    Value<String>? calibreId,
+    Value<int>? sourceId,
+    Value<String>? externalId,
     Value<String>? title,
     Value<String?>? author,
     Value<String?>? series,
     Value<double?>? seriesIndex,
     Value<String?>? coverUrl,
-    Value<String>? opdsDownloadUrl,
+    Value<String?>? downloadUrl,
     Value<String?>? localEpubPath,
     Value<bool>? isDownloaded,
     Value<String?>? language,
@@ -1304,14 +1413,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
   }) {
     return BooksCompanion(
       id: id ?? this.id,
-      serverId: serverId ?? this.serverId,
-      calibreId: calibreId ?? this.calibreId,
+      sourceId: sourceId ?? this.sourceId,
+      externalId: externalId ?? this.externalId,
       title: title ?? this.title,
       author: author ?? this.author,
       series: series ?? this.series,
       seriesIndex: seriesIndex ?? this.seriesIndex,
       coverUrl: coverUrl ?? this.coverUrl,
-      opdsDownloadUrl: opdsDownloadUrl ?? this.opdsDownloadUrl,
+      downloadUrl: downloadUrl ?? this.downloadUrl,
       localEpubPath: localEpubPath ?? this.localEpubPath,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       language: language ?? this.language,
@@ -1330,11 +1439,11 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
-    if (serverId.present) {
-      map['server_id'] = Variable<int>(serverId.value);
+    if (sourceId.present) {
+      map['source_id'] = Variable<int>(sourceId.value);
     }
-    if (calibreId.present) {
-      map['calibre_id'] = Variable<String>(calibreId.value);
+    if (externalId.present) {
+      map['external_id'] = Variable<String>(externalId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1351,8 +1460,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (coverUrl.present) {
       map['cover_url'] = Variable<String>(coverUrl.value);
     }
-    if (opdsDownloadUrl.present) {
-      map['opds_download_url'] = Variable<String>(opdsDownloadUrl.value);
+    if (downloadUrl.present) {
+      map['download_url'] = Variable<String>(downloadUrl.value);
     }
     if (localEpubPath.present) {
       map['local_epub_path'] = Variable<String>(localEpubPath.value);
@@ -1388,14 +1497,14 @@ class BooksCompanion extends UpdateCompanion<Book> {
   String toString() {
     return (StringBuffer('BooksCompanion(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('calibreId: $calibreId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('externalId: $externalId, ')
           ..write('title: $title, ')
           ..write('author: $author, ')
           ..write('series: $series, ')
           ..write('seriesIndex: $seriesIndex, ')
           ..write('coverUrl: $coverUrl, ')
-          ..write('opdsDownloadUrl: $opdsDownloadUrl, ')
+          ..write('downloadUrl: $downloadUrl, ')
           ..write('localEpubPath: $localEpubPath, ')
           ..write('isDownloaded: $isDownloaded, ')
           ..write('language: $language, ')
@@ -2207,13 +2316,13 @@ class AnnotationsCompanion extends UpdateCompanion<Annotation> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $ServersTable servers = $ServersTable(this);
+  late final $SourcesTable sources = $SourcesTable(this);
   late final $BooksTable books = $BooksTable(this);
   late final $ReadingProgressTable readingProgress = $ReadingProgressTable(
     this,
   );
   late final $AnnotationsTable annotations = $AnnotationsTable(this);
-  late final ServersDao serversDao = ServersDao(this as AppDatabase);
+  late final SourcesDao sourcesDao = SourcesDao(this as AppDatabase);
   late final BooksDao booksDao = BooksDao(this as AppDatabase);
   late final ReadingProgressDao readingProgressDao = ReadingProgressDao(
     this as AppDatabase,
@@ -2226,7 +2335,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    servers,
+    sources,
     books,
     readingProgress,
     annotations,
@@ -2235,7 +2344,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'servers',
+        'sources',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('books', kind: UpdateKind.delete)],
@@ -2257,41 +2366,45 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ]);
 }
 
-typedef $$ServersTableCreateCompanionBuilder =
-    ServersCompanion Function({
+typedef $$SourcesTableCreateCompanionBuilder =
+    SourcesCompanion Function({
       Value<int> id,
+      required String type,
       required String name,
-      required String url,
+      Value<String?> url,
       Value<String?> username,
+      Value<bool> hasCredentials,
       Value<bool> isActive,
       Value<DateTime> createdAt,
     });
-typedef $$ServersTableUpdateCompanionBuilder =
-    ServersCompanion Function({
+typedef $$SourcesTableUpdateCompanionBuilder =
+    SourcesCompanion Function({
       Value<int> id,
+      Value<String> type,
       Value<String> name,
-      Value<String> url,
+      Value<String?> url,
       Value<String?> username,
+      Value<bool> hasCredentials,
       Value<bool> isActive,
       Value<DateTime> createdAt,
     });
 
-final class $$ServersTableReferences
-    extends BaseReferences<_$AppDatabase, $ServersTable, Server> {
-  $$ServersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+final class $$SourcesTableReferences
+    extends BaseReferences<_$AppDatabase, $SourcesTable, Source> {
+  $$SourcesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static MultiTypedResultKey<$BooksTable, List<Book>> _booksRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.books,
-    aliasName: $_aliasNameGenerator(db.servers.id, db.books.serverId),
+    aliasName: $_aliasNameGenerator(db.sources.id, db.books.sourceId),
   );
 
   $$BooksTableProcessedTableManager get booksRefs {
     final manager = $$BooksTableTableManager(
       $_db,
       $_db.books,
-    ).filter((f) => f.serverId.id.sqlEquals($_itemColumn<int>('id')!));
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_booksRefsTable($_db));
     return ProcessedTableManager(
@@ -2300,9 +2413,9 @@ final class $$ServersTableReferences
   }
 }
 
-class $$ServersTableFilterComposer
-    extends Composer<_$AppDatabase, $ServersTable> {
-  $$ServersTableFilterComposer({
+class $$SourcesTableFilterComposer
+    extends Composer<_$AppDatabase, $SourcesTable> {
+  $$SourcesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2311,6 +2424,11 @@ class $$ServersTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2326,6 +2444,11 @@ class $$ServersTableFilterComposer
 
   ColumnFilters<String> get username => $composableBuilder(
     column: $table.username,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasCredentials => $composableBuilder(
+    column: $table.hasCredentials,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2346,7 +2469,7 @@ class $$ServersTableFilterComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.books,
-      getReferencedColumn: (t) => t.serverId,
+      getReferencedColumn: (t) => t.sourceId,
       builder:
           (
             joinBuilder, {
@@ -2365,9 +2488,9 @@ class $$ServersTableFilterComposer
   }
 }
 
-class $$ServersTableOrderingComposer
-    extends Composer<_$AppDatabase, $ServersTable> {
-  $$ServersTableOrderingComposer({
+class $$SourcesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SourcesTable> {
+  $$SourcesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2376,6 +2499,11 @@ class $$ServersTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2394,6 +2522,11 @@ class $$ServersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get hasCredentials => $composableBuilder(
+    column: $table.hasCredentials,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -2405,9 +2538,9 @@ class $$ServersTableOrderingComposer
   );
 }
 
-class $$ServersTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ServersTable> {
-  $$ServersTableAnnotationComposer({
+class $$SourcesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SourcesTable> {
+  $$SourcesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2417,6 +2550,9 @@ class $$ServersTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
@@ -2425,6 +2561,11 @@ class $$ServersTableAnnotationComposer
 
   GeneratedColumn<String> get username =>
       $composableBuilder(column: $table.username, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasCredentials => $composableBuilder(
+    column: $table.hasCredentials,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -2439,7 +2580,7 @@ class $$ServersTableAnnotationComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.books,
-      getReferencedColumn: (t) => t.serverId,
+      getReferencedColumn: (t) => t.sourceId,
       builder:
           (
             joinBuilder, {
@@ -2458,61 +2599,69 @@ class $$ServersTableAnnotationComposer
   }
 }
 
-class $$ServersTableTableManager
+class $$SourcesTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $ServersTable,
-          Server,
-          $$ServersTableFilterComposer,
-          $$ServersTableOrderingComposer,
-          $$ServersTableAnnotationComposer,
-          $$ServersTableCreateCompanionBuilder,
-          $$ServersTableUpdateCompanionBuilder,
-          (Server, $$ServersTableReferences),
-          Server,
+          $SourcesTable,
+          Source,
+          $$SourcesTableFilterComposer,
+          $$SourcesTableOrderingComposer,
+          $$SourcesTableAnnotationComposer,
+          $$SourcesTableCreateCompanionBuilder,
+          $$SourcesTableUpdateCompanionBuilder,
+          (Source, $$SourcesTableReferences),
+          Source,
           PrefetchHooks Function({bool booksRefs})
         > {
-  $$ServersTableTableManager(_$AppDatabase db, $ServersTable table)
+  $$SourcesTableTableManager(_$AppDatabase db, $SourcesTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ServersTableFilterComposer($db: db, $table: table),
+              $$SourcesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ServersTableOrderingComposer($db: db, $table: table),
+              $$SourcesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ServersTableAnnotationComposer($db: db, $table: table),
+              $$SourcesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<String> url = const Value.absent(),
+                Value<String?> url = const Value.absent(),
                 Value<String?> username = const Value.absent(),
+                Value<bool> hasCredentials = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
-              }) => ServersCompanion(
+              }) => SourcesCompanion(
                 id: id,
+                type: type,
                 name: name,
                 url: url,
                 username: username,
+                hasCredentials: hasCredentials,
                 isActive: isActive,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                required String type,
                 required String name,
-                required String url,
+                Value<String?> url = const Value.absent(),
                 Value<String?> username = const Value.absent(),
+                Value<bool> hasCredentials = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
-              }) => ServersCompanion.insert(
+              }) => SourcesCompanion.insert(
                 id: id,
+                type: type,
                 name: name,
                 url: url,
                 username: username,
+                hasCredentials: hasCredentials,
                 isActive: isActive,
                 createdAt: createdAt,
               ),
@@ -2520,7 +2669,7 @@ class $$ServersTableTableManager
               .map(
                 (e) => (
                   e.readTable(table),
-                  $$ServersTableReferences(db, table, e),
+                  $$SourcesTableReferences(db, table, e),
                 ),
               )
               .toList(),
@@ -2532,15 +2681,15 @@ class $$ServersTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (booksRefs)
-                    await $_getPrefetchedData<Server, $ServersTable, Book>(
+                    await $_getPrefetchedData<Source, $SourcesTable, Book>(
                       currentTable: table,
-                      referencedTable: $$ServersTableReferences._booksRefsTable(
+                      referencedTable: $$SourcesTableReferences._booksRefsTable(
                         db,
                       ),
                       managerFromTypedResult: (p0) =>
-                          $$ServersTableReferences(db, table, p0).booksRefs,
+                          $$SourcesTableReferences(db, table, p0).booksRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.serverId == item.id),
+                          referencedItems.where((e) => e.sourceId == item.id),
                       typedResults: items,
                     ),
                 ];
@@ -2551,31 +2700,31 @@ class $$ServersTableTableManager
       );
 }
 
-typedef $$ServersTableProcessedTableManager =
+typedef $$SourcesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ServersTable,
-      Server,
-      $$ServersTableFilterComposer,
-      $$ServersTableOrderingComposer,
-      $$ServersTableAnnotationComposer,
-      $$ServersTableCreateCompanionBuilder,
-      $$ServersTableUpdateCompanionBuilder,
-      (Server, $$ServersTableReferences),
-      Server,
+      $SourcesTable,
+      Source,
+      $$SourcesTableFilterComposer,
+      $$SourcesTableOrderingComposer,
+      $$SourcesTableAnnotationComposer,
+      $$SourcesTableCreateCompanionBuilder,
+      $$SourcesTableUpdateCompanionBuilder,
+      (Source, $$SourcesTableReferences),
+      Source,
       PrefetchHooks Function({bool booksRefs})
     >;
 typedef $$BooksTableCreateCompanionBuilder =
     BooksCompanion Function({
       Value<int> id,
-      required int serverId,
-      required String calibreId,
+      required int sourceId,
+      required String externalId,
       required String title,
       Value<String?> author,
       Value<String?> series,
       Value<double?> seriesIndex,
       Value<String?> coverUrl,
-      required String opdsDownloadUrl,
+      Value<String?> downloadUrl,
       Value<String?> localEpubPath,
       Value<bool> isDownloaded,
       Value<String?> language,
@@ -2589,14 +2738,14 @@ typedef $$BooksTableCreateCompanionBuilder =
 typedef $$BooksTableUpdateCompanionBuilder =
     BooksCompanion Function({
       Value<int> id,
-      Value<int> serverId,
-      Value<String> calibreId,
+      Value<int> sourceId,
+      Value<String> externalId,
       Value<String> title,
       Value<String?> author,
       Value<String?> series,
       Value<double?> seriesIndex,
       Value<String?> coverUrl,
-      Value<String> opdsDownloadUrl,
+      Value<String?> downloadUrl,
       Value<String?> localEpubPath,
       Value<bool> isDownloaded,
       Value<String?> language,
@@ -2612,17 +2761,17 @@ final class $$BooksTableReferences
     extends BaseReferences<_$AppDatabase, $BooksTable, Book> {
   $$BooksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $ServersTable _serverIdTable(_$AppDatabase db) => db.servers
-      .createAlias($_aliasNameGenerator(db.books.serverId, db.servers.id));
+  static $SourcesTable _sourceIdTable(_$AppDatabase db) => db.sources
+      .createAlias($_aliasNameGenerator(db.books.sourceId, db.sources.id));
 
-  $$ServersTableProcessedTableManager get serverId {
-    final $_column = $_itemColumn<int>('server_id')!;
+  $$SourcesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<int>('source_id')!;
 
-    final manager = $$ServersTableTableManager(
+    final manager = $$SourcesTableTableManager(
       $_db,
-      $_db.servers,
+      $_db.sources,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_serverIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -2681,8 +2830,8 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get calibreId => $composableBuilder(
-    column: $table.calibreId,
+  ColumnFilters<String> get externalId => $composableBuilder(
+    column: $table.externalId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2711,8 +2860,8 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get opdsDownloadUrl => $composableBuilder(
-    column: $table.opdsDownloadUrl,
+  ColumnFilters<String> get downloadUrl => $composableBuilder(
+    column: $table.downloadUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2761,20 +2910,20 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $$ServersTableFilterComposer get serverId {
-    final $$ServersTableFilterComposer composer = $composerBuilder(
+  $$SourcesTableFilterComposer get sourceId {
+    final $$SourcesTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.serverId,
-      referencedTable: $db.servers,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ServersTableFilterComposer(
+          }) => $$SourcesTableFilterComposer(
             $db: $db,
-            $table: $db.servers,
+            $table: $db.sources,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2849,8 +2998,8 @@ class $$BooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get calibreId => $composableBuilder(
-    column: $table.calibreId,
+  ColumnOrderings<String> get externalId => $composableBuilder(
+    column: $table.externalId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2879,8 +3028,8 @@ class $$BooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get opdsDownloadUrl => $composableBuilder(
-    column: $table.opdsDownloadUrl,
+  ColumnOrderings<String> get downloadUrl => $composableBuilder(
+    column: $table.downloadUrl,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2929,20 +3078,20 @@ class $$BooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$ServersTableOrderingComposer get serverId {
-    final $$ServersTableOrderingComposer composer = $composerBuilder(
+  $$SourcesTableOrderingComposer get sourceId {
+    final $$SourcesTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.serverId,
-      referencedTable: $db.servers,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ServersTableOrderingComposer(
+          }) => $$SourcesTableOrderingComposer(
             $db: $db,
-            $table: $db.servers,
+            $table: $db.sources,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2965,8 +3114,10 @@ class $$BooksTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get calibreId =>
-      $composableBuilder(column: $table.calibreId, builder: (column) => column);
+  GeneratedColumn<String> get externalId => $composableBuilder(
+    column: $table.externalId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -2985,8 +3136,8 @@ class $$BooksTableAnnotationComposer
   GeneratedColumn<String> get coverUrl =>
       $composableBuilder(column: $table.coverUrl, builder: (column) => column);
 
-  GeneratedColumn<String> get opdsDownloadUrl => $composableBuilder(
-    column: $table.opdsDownloadUrl,
+  GeneratedColumn<String> get downloadUrl => $composableBuilder(
+    column: $table.downloadUrl,
     builder: (column) => column,
   );
 
@@ -3025,20 +3176,20 @@ class $$BooksTableAnnotationComposer
   GeneratedColumn<DateTime> get syncedAt =>
       $composableBuilder(column: $table.syncedAt, builder: (column) => column);
 
-  $$ServersTableAnnotationComposer get serverId {
-    final $$ServersTableAnnotationComposer composer = $composerBuilder(
+  $$SourcesTableAnnotationComposer get sourceId {
+    final $$SourcesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.serverId,
-      referencedTable: $db.servers,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.sources,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ServersTableAnnotationComposer(
+          }) => $$SourcesTableAnnotationComposer(
             $db: $db,
-            $table: $db.servers,
+            $table: $db.sources,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3113,7 +3264,7 @@ class $$BooksTableTableManager
           (Book, $$BooksTableReferences),
           Book,
           PrefetchHooks Function({
-            bool serverId,
+            bool sourceId,
             bool readingProgressRefs,
             bool annotationsRefs,
           })
@@ -3132,14 +3283,14 @@ class $$BooksTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<int> serverId = const Value.absent(),
-                Value<String> calibreId = const Value.absent(),
+                Value<int> sourceId = const Value.absent(),
+                Value<String> externalId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> author = const Value.absent(),
                 Value<String?> series = const Value.absent(),
                 Value<double?> seriesIndex = const Value.absent(),
                 Value<String?> coverUrl = const Value.absent(),
-                Value<String> opdsDownloadUrl = const Value.absent(),
+                Value<String?> downloadUrl = const Value.absent(),
                 Value<String?> localEpubPath = const Value.absent(),
                 Value<bool> isDownloaded = const Value.absent(),
                 Value<String?> language = const Value.absent(),
@@ -3151,14 +3302,14 @@ class $$BooksTableTableManager
                 Value<DateTime> syncedAt = const Value.absent(),
               }) => BooksCompanion(
                 id: id,
-                serverId: serverId,
-                calibreId: calibreId,
+                sourceId: sourceId,
+                externalId: externalId,
                 title: title,
                 author: author,
                 series: series,
                 seriesIndex: seriesIndex,
                 coverUrl: coverUrl,
-                opdsDownloadUrl: opdsDownloadUrl,
+                downloadUrl: downloadUrl,
                 localEpubPath: localEpubPath,
                 isDownloaded: isDownloaded,
                 language: language,
@@ -3172,14 +3323,14 @@ class $$BooksTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required int serverId,
-                required String calibreId,
+                required int sourceId,
+                required String externalId,
                 required String title,
                 Value<String?> author = const Value.absent(),
                 Value<String?> series = const Value.absent(),
                 Value<double?> seriesIndex = const Value.absent(),
                 Value<String?> coverUrl = const Value.absent(),
-                required String opdsDownloadUrl,
+                Value<String?> downloadUrl = const Value.absent(),
                 Value<String?> localEpubPath = const Value.absent(),
                 Value<bool> isDownloaded = const Value.absent(),
                 Value<String?> language = const Value.absent(),
@@ -3191,14 +3342,14 @@ class $$BooksTableTableManager
                 Value<DateTime> syncedAt = const Value.absent(),
               }) => BooksCompanion.insert(
                 id: id,
-                serverId: serverId,
-                calibreId: calibreId,
+                sourceId: sourceId,
+                externalId: externalId,
                 title: title,
                 author: author,
                 series: series,
                 seriesIndex: seriesIndex,
                 coverUrl: coverUrl,
-                opdsDownloadUrl: opdsDownloadUrl,
+                downloadUrl: downloadUrl,
                 localEpubPath: localEpubPath,
                 isDownloaded: isDownloaded,
                 language: language,
@@ -3217,7 +3368,7 @@ class $$BooksTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                serverId = false,
+                sourceId = false,
                 readingProgressRefs = false,
                 annotationsRefs = false,
               }) {
@@ -3243,15 +3394,15 @@ class $$BooksTableTableManager
                           dynamic
                         >
                       >(state) {
-                        if (serverId) {
+                        if (sourceId) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.serverId,
+                                    currentColumn: table.sourceId,
                                     referencedTable: $$BooksTableReferences
-                                        ._serverIdTable(db),
+                                        ._sourceIdTable(db),
                                     referencedColumn: $$BooksTableReferences
-                                        ._serverIdTable(db)
+                                        ._sourceIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -3324,7 +3475,7 @@ typedef $$BooksTableProcessedTableManager =
       (Book, $$BooksTableReferences),
       Book,
       PrefetchHooks Function({
-        bool serverId,
+        bool sourceId,
         bool readingProgressRefs,
         bool annotationsRefs,
       })
@@ -4012,8 +4163,8 @@ typedef $$AnnotationsTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$ServersTableTableManager get servers =>
-      $$ServersTableTableManager(_db, _db.servers);
+  $$SourcesTableTableManager get sources =>
+      $$SourcesTableTableManager(_db, _db.sources);
   $$BooksTableTableManager get books =>
       $$BooksTableTableManager(_db, _db.books);
   $$ReadingProgressTableTableManager get readingProgress =>

@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -12,15 +12,13 @@ class BookCard extends StatelessWidget {
     super.key,
     required this.book,
     this.progress,
-    this.serverUsername,
-    this.serverPassword,
+    this.showSourceBadge = false,
     this.onTap,
   });
 
   final Book book;
   final ReadingProgressData? progress;
-  final String? serverUsername;
-  final String? serverPassword;
+  final bool showSourceBadge;
   final VoidCallback? onTap;
 
   @override
@@ -53,6 +51,12 @@ class BookCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  if (showSourceBadge)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: _SourceBadge(book: book),
+                    ),
                 ],
               ),
             ),
@@ -83,21 +87,50 @@ class BookCard extends StatelessWidget {
       return _CoverPlaceholder(theme: theme);
     }
 
+    if (_isLocalPath(book.coverUrl!)) {
+      final file = File(book.coverUrl!);
+      if (file.existsSync()) {
+        return Image.file(file, fit: BoxFit.cover);
+      }
+      return _CoverPlaceholder(theme: theme);
+    }
+
     return CachedNetworkImage(
       imageUrl: book.coverUrl!,
       fit: BoxFit.cover,
-      httpHeaders: _authHeaders,
       placeholder: (_, __) => const ShimmerBox(),
       errorWidget: (_, __, ___) => _CoverPlaceholder(theme: theme),
     );
   }
 
-  Map<String, String> get _authHeaders {
-    if (serverUsername == null || serverUsername!.isEmpty) return const {};
-    final token = base64Encode(
-      utf8.encode('$serverUsername:${serverPassword ?? ''}'),
+  bool _isLocalPath(String url) {
+    return !url.startsWith('http://') && !url.startsWith('https://');
+  }
+}
+
+class _SourceBadge extends StatelessWidget {
+  const _SourceBadge({required this.book});
+
+  final Book book;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Icon(
+        book.downloadUrl != null && !book.downloadUrl!.startsWith('http')
+            ? Icons.folder_rounded
+            : Icons.dns_rounded,
+        size: 14,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
-    return {'authorization': 'Basic $token'};
   }
 }
 
